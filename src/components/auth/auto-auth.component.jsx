@@ -1,8 +1,8 @@
-import { getCookie } from "../../utils/cookies"
+import { getCookie, removeCookie } from "../../utils/cookies"
 import { useEffect } from "react"
 import { signInWithCustomToken } from "firebase/auth"
 import { auth, db } from "../../utils/firebase"
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore"
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore"
 
 const AutoAuth = () => {
     useEffect(() => {
@@ -14,15 +14,29 @@ const AutoAuth = () => {
                     const user = auth.currentUser;
                     if(user){
                         const userRef = doc(db, 'users', user.uid)
-                        await updateDoc(userRef, {
-                            isOnline: true,
-                            lastActive: serverTimestamp()
-                        })
+                        const userSnapshot = await getDoc(userRef)
+                        if(userSnapshot.exists()){
+                            await updateDoc(userRef, {
+                                isOnline: true,
+                                lastActive: serverTimestamp()
+                            })
+                        }
+                        else{
+                            await setDoc(userDocRef, {
+                                name: user.displayName,
+                                email: user.email,
+                                photoURL: user.photoURL,
+                                lastActive: serverTimestamp(),
+                                isOnline: true
+                            })
+                        }
+
                     }
 
                 }
             } catch (error) {
                 alert("Error with Auto Sign In.", error)
+                removeCookie()
             }
         }
 
