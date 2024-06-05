@@ -22,7 +22,7 @@ const AutoAuth = () => {
                             })
                         }
                         else{
-                            await setDoc(userDocRef, {
+                            await setDoc(userRef, {
                                 name: user.displayName,
                                 email: user.email,
                                 photoURL: user.photoURL,
@@ -35,7 +35,7 @@ const AutoAuth = () => {
 
                 }
                 catch (error) {
-                    alert("Error with Auto Sign In.", error)
+                    console.error("Error with Auto Sign In.", error)
                     removeCookie()
                 }
             }   
