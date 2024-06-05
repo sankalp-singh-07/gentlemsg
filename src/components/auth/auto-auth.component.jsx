@@ -7,9 +7,9 @@ import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firest
 const AutoAuth = () => {
     useEffect(() => {
         const autoLogged = async () => {
-            try {
-                const token = getCookie()
-                if(token){
+            const token = getCookie()
+            if(token){
+                try{
                     await signInWithCustomToken(auth, token)
                     const user = auth.currentUser;
                     if(user){
@@ -34,10 +34,11 @@ const AutoAuth = () => {
                     }
 
                 }
-            } catch (error) {
-                alert("Error with Auto Sign In.", error)
-                removeCookie()
-            }
+                catch (error) {
+                    alert("Error with Auto Sign In.", error)
+                    removeCookie()
+                }
+            }   
         }
 
         autoLogged();
