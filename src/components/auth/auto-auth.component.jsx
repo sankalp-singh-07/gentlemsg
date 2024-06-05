@@ -22,7 +22,7 @@ const AutoAuth = () => {
 
                 }
             } catch (error) {
-                
+                alert("Error with Auto Sign In.", error)
             }
         }
 
@@ -30,11 +30,7 @@ const AutoAuth = () => {
     }, [])
 
 
-    return(
-        <>
-            
-        </>
-    )
+    return null;
 }
 
 export default AutoAuth
