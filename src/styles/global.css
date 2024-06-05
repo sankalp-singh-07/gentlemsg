@@ -1,0 +1,6 @@
+body {
+    @apply font-sans;
+    background-color: #F4F9FF;
+    font-family: 'Inter', sans-serif;
+    text-align: center;
+}
