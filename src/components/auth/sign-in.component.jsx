@@ -1,6 +1,6 @@
 import { auth, googleProvider, db } from "../../utils/firebase"
 import { signInWithPopup } from "firebase/auth"
-import { setDoc, doc, getDoc, serverTimestamp } from "firebase/firestore"
+import { setDoc, doc, serverTimestamp } from "firebase/firestore"
 import { setCookie } from "../../utils/cookies"
 
 const SignIn = () => {
@@ -16,24 +16,17 @@ const SignIn = () => {
             setCookie(token)
 
             const userDocRef = doc(db, "users", user.uid)
-            const userSnapshot = await getDoc(userDocRef)
 
-            if(!userSnapshot.exists){
-                await setDoc(userDocRef, {
-                    name: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    lastActive: serverTimestamp(),
-                    isOnline: true
-                })
-            }
-
-            else{
-                await setDoc(userDocRef, { isOnline: true, lastActive: serverTimestamp() }, { merge : true })
-            }
+            await setDoc(doc(db, 'users', user.uid), {
+                name: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastActive: serverTimestamp(),
+                isOnline: true
+              }, { merge: true });
             
         } catch (error) {
-            alert("Error signing in with Google.", error)
+            console.error("Error signing in with Google.", error)
         }
     }
 

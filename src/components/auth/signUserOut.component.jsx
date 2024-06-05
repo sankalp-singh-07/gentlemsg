@@ -19,7 +19,7 @@ const SignUserOut = async () => {
         removeCookie()
 
     } catch (error) {
-        alert('Sign Out Error', error)
+        console.error('Sign Out Error', error)
     }
 }
 
