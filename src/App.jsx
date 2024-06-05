@@ -2,12 +2,13 @@ import './App.css'
 import AutoAuth from './components/auth/auto-auth.component'
 
 import Home from './components/home/home.component'
+import Router from './components/router/router.component'
 
 function App() {
   return (
     <>
-      <Home />
       <AutoAuth />
+      <Router />
     </>
   )
 }

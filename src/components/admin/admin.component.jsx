@@ -1,7 +1,10 @@
+import SignOut from "../auth/sign-out.component"
+
 const Admin = () => {
     return (
         <>
-            <h1>Admin Page</h1>
+            <Admin />
+            <SignOut />
         </>
     )
 }
