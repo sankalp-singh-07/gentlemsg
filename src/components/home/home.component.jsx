@@ -1,5 +1,5 @@
 import SignIn from "../auth/sign-in.component"
-import '../../styles/home.css'
+import '../../styles/components/home.css'
 import { Link } from "react-router-dom"
 
 const Home = () => {

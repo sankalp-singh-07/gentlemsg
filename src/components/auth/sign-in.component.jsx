@@ -1,4 +1,4 @@
-import '../../styles/signInGoogle.css'
+import '../../styles/components/signInGoogle.css';
 import SignInHandler from './handlers/sign-in-handler.component';
 
 const SignIn = () => {
