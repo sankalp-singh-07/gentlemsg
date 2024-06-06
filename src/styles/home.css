@@ -11,8 +11,7 @@
 }
 
 .dot {
-    @apply text-4xl;
-    color: #0077B6;
+    @apply text-4xl text-primary;
 }
 
 .heading {
