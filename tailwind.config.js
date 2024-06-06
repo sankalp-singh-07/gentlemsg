@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./src/**/*.{js,jsx, css}", 'node_modules/flowbite-react/lib/esm/**/*.js'],
+  content: ["./src/**/*.{js,jsx, css}"],
   darkMode: false, 
   theme: {
     extend: {
@@ -17,7 +17,5 @@ export default {
     },
   },
   
-  plugins: [
-    require('flowbite/plugin')
-  ]
+  plugins: []
 }

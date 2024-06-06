@@ -1,10 +1,11 @@
 import SignOut from "../auth/sign-out.component"
+import { SidebarComponent } from "./sidebar.component"
 
 const Admin = () => {
     return (
         <>
-            <h1>Admin</h1>
-            <SignOut />
+            <SidebarComponent />
+            {/* <SignOut /> */}
         </>
     )
 }
