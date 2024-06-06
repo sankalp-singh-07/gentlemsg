@@ -1,3 +1,28 @@
 .logo {
-    @apply text-lg font-bold text-center;
+    @apply absolute left-1/2 transform -translate-x-1/2 text-center text-3xl font-semibold;
+}
+
+.contact {
+    @apply text-lg font-semibold ml-auto;
+}
+
+.container-1 {
+    @apply flex justify-center items-center relative px-9 py-5;
+}
+
+.dot {
+    @apply text-4xl;
+    color: #0077B6;
+}
+
+.heading {
+    @apply leading-none tracking-normal;
+}
+
+.container {
+    @apply flex flex-row items-center justify-center;
+}
+
+.sub-heading {
+    @apply font-medium text-black text-lg mb-10;
 }
