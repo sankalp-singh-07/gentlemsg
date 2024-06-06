@@ -1,9 +1,9 @@
-import SignUserOut from "./signUserOut.component"
+import SignOutHandler from "./handlers/sign-out-handler.component"
 
 const SignOut = () => {
     return(
         <>
-            <button onClick={SignUserOut}>Sign Out</button>
+            <button onClick={SignOutHandler}>Sign Out</button>
         </>
     )
 }

@@ -1,38 +1,10 @@
-import { auth, googleProvider, db } from "../../utils/firebase"
-import { signInWithPopup } from "firebase/auth"
-import { setDoc, doc, serverTimestamp } from "firebase/firestore"
-import { setCookie } from "../../utils/cookies"
 import '../../styles/signInGoogle.css'
+import SignInHandler from './handlers/sign-in-handler.component';
 
 const SignIn = () => {
 
-    const handleClick = async () => {
-
-        try {
-
-            const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
-
-            const token = await user.getIdToken()
-            setCookie(token)
-
-            const userDocRef = doc(db, "users", user.uid)
-
-            await setDoc(doc(db, 'users', user.uid), {
-                name: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastActive: serverTimestamp(),
-                isOnline: true
-              }, { merge: true });
-            
-        } catch (error) {
-            console.error("Error signing in with Google.", error)
-        }
-    }
-
     return (
-        <button onClick={handleClick} className="sign-in-button group">
+        <button onClick={SignInHandler} className="sign-in-button group">
           SIGN IN WITH GOOGLE
           <svg
             className="arrow"

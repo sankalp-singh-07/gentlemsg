@@ -1,9 +1,9 @@
-import { auth, db } from "../../utils/firebase"
+import { auth, db } from "../../../utils/firebase"
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore"
 import { signOut } from "firebase/auth"
-import { removeCookie } from "../../utils/cookies"
+import { removeCookie } from "../../../utils/cookies"
 
-const SignUserOut = async () => {
+const SignOutHandler = async () => {
     try {
 
         const user = auth.currentUser;
@@ -23,4 +23,4 @@ const SignUserOut = async () => {
     }
 }
 
-export default SignUserOut
+export default SignOutHandler
