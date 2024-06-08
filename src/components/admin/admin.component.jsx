@@ -1,13 +1,11 @@
-import SignOut from "../auth/sign-out.component"
-import { SidebarComponent } from "./sidebar.component"
+import SignOut from '../auth/sign-out.component';
 
 const Admin = () => {
-    return (
-        <>
-            <SidebarComponent />
-            {/* <SignOut /> */}
-        </>
-    )
-}
+	return (
+		<>
+			<SignOut />
+		</>
+	);
+};
 
-export default Admin
+export default Admin;
