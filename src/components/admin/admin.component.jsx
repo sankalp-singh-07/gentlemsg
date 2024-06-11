@@ -1,10 +1,12 @@
-import SignOut from '../auth/sign-out.component';
+import Dashboard from '../dashboard/dashboard.component';
+// import SignOut from '../auth/sign-out.component';
 
 const Admin = () => {
 	return (
-		<>
-			<SignOut />
-		</>
+		<div className="w-screen h-screen flex">
+			<Dashboard />
+			{/* <SignOut /> */}
+		</div>
 	);
 };
 

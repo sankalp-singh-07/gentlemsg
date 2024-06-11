@@ -1,0 +1,3 @@
+.chat{
+    @apply flex-grow-[3] flex-shrink basis-0 bg-blue-500 h-full w-full
+}
