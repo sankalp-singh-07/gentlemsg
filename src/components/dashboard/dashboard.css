@@ -1,0 +1,3 @@
+.dashboard {
+    @apply flex items-center justify-between h-full w-full;
+}
