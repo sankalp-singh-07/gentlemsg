@@ -1,3 +1,35 @@
 .chat{
-    @apply flex-grow-[3] flex-shrink basis-0 bg-blue-500 h-full w-full
+    @apply flex-grow-[3] flex-shrink basis-0 bg-tertiary h-screen w-full
+}
+
+.userDetails{
+    @apply flex items-center justify-between h-full w-fit px-4
+}
+
+.avatar{
+    @apply w-12 h-12 rounded-full mr-4
+}
+
+.currentStatus{
+    @apply flex items-start justify-between flex-col
+}
+
+.sub{
+    @apply text-xs font-light text-tertiary
+}
+
+.icons{
+    @apply flex items-center h-full w-auto
+}
+
+.bottom {
+    @apply flex items-center justify-between h-16  w-full px-6
+}
+
+.inputContainer{
+    @apply flex items-center justify-between h-full w-full px-4
+}
+
+.inputEl{
+    @apply w-11/12 flex items-center justify-between h-full px-3 bg-quatery rounded-xl focus:outline-none placeholder:text-sm focus:placeholder:text-quatery
 }

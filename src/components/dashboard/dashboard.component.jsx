@@ -7,7 +7,7 @@ const Dashboard = () => {
 	return (
 		<div className="dashboard">
 			<Sidebar />
-			<div></div>
+			<div className="h-full w-1.5 bg-[#B8D9FF]"></div>
 			<Chat />
 		</div>
 	);
