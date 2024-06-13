@@ -1,5 +1,6 @@
 import React from 'react';
 import './chat.css';
+import Messages from './childComponents/messages.component';
 
 const Chat = () => {
 	return (
@@ -44,7 +45,9 @@ const Chat = () => {
 					/>
 				</div>
 			</div>
-			<div className="mid"></div>
+			<div className="middle scrollbar-hide">
+				<Messages />
+			</div>
 			<div className="bottom">
 				<div className="inputContainer">
 					<div className="inputEl">
