@@ -1,17 +1,17 @@
 .logo {
-    @apply absolute left-1/2 transform -translate-x-1/2 text-center text-3xl font-semibold;
+    @apply absolute max-[450px]:left-3 left-9 sm:left-1/2 sm:transform sm:-translate-x-1/2 text-center text-xl sm:text-3xl font-semibold;
 }
 
 .contact {
-    @apply text-lg font-semibold ml-auto;
+    @apply text-base sm:text-lg font-medium sm:font-semibold ml-auto;
 }
 
 .container-1 {
-    @apply flex justify-center items-center relative px-9 py-5;
+    @apply flex justify-center items-center relative max-[450px]:px-3 px-9 py-5;
 }
 
 .dot {
-    @apply text-4xl text-primary;
+    @apply text-xl sm:text-4xl text-primary;
 }
 
 .heading {
@@ -23,5 +23,5 @@
 }
 
 .sub-heading {
-    @apply font-medium text-black text-lg mb-10;
+    @apply font-medium text-black text-lg mb-6 sm:mb-10;
 }
