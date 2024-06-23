@@ -1,41 +1,37 @@
-import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
-import Home from "../home/home.component";
-import Admin from "../admin/admin.component";
-import NotFound from "../404/notfound.component";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../../utils/firebase";
-import { useEffect } from "react";
-import Chat from "../chat/chat.component";
+import { Routes, Route, Navigate, BrowserRouter } from 'react-router-dom';
+import Home from '../home/home.component';
+import Admin from '../admin/admin.component';
+import NotFound from '../404/notfound.component';
+import Chat from '../chat/chat.component';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../store/user/user.selector';
 
 const Router = () => {
-  const [user, loading, error] = useAuthState(auth);
+	const { currentUser, loading } = useSelector(selectCurrentUser);
 
-  useEffect(() => {
-    if (error)
-      return (
-        <>
-          <h1>Error</h1>
-        </>
-      );
-  }, [error]);
+	if (loading)
+		return (
+			<>
+				<h1>Loading</h1>
+			</>
+		);
 
-  if (loading)
-    return (
-      <>
-        <h1>Loading</h1>
-      </>
-    );
-
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={user ? <Navigate to="/admin" /> : <Home />} />
-        <Route path="/admin" element={user ? <Admin /> : <Navigate to="/" />} />
-        <Route path="*" element={<NotFound />} />
-        <Route path="/chat" element={<Chat inMobile="show" />} />
-      </Routes>
-    </BrowserRouter>
-  );
+	return (
+		<BrowserRouter>
+			<Routes>
+				<Route
+					path="/"
+					element={currentUser ? <Navigate to="/admin" /> : <Home />}
+				/>
+				<Route
+					path="/admin"
+					element={currentUser ? <Admin /> : <Navigate to="/" />}
+				/>
+				<Route path="*" element={<NotFound />} />
+				<Route path="/chat" element={<Chat inMobile="show" />} />
+			</Routes>
+		</BrowserRouter>
+	);
 };
 
 export default Router;
