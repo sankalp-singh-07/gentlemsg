@@ -34,6 +34,8 @@ const AutoAuth = () => {
 								photoURL: user.photoURL,
 								lastActive: serverTimestamp(),
 								isOnline: true,
+								friends: [],
+								blocked: [],
 							});
 						}
 					} else {
