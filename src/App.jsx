@@ -10,6 +10,7 @@ import {
 	setLoading,
 } from './store/user/user.reducer';
 import { onAuthStateChangedListener } from './utils/firebase';
+import Status from './components/status/status.component';
 
 function App() {
 	const dispatch = useDispatch();
@@ -39,6 +40,7 @@ function App() {
 		<>
 			<AutoAuth />
 			<Router />
+			<Status />
 		</>
 	);
 }
