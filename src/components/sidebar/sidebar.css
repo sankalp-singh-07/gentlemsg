@@ -22,15 +22,15 @@
     @apply flex items-center w-full justify-between h-16
 }
 
-.search {
+.searchEl {
     @apply flex w-10/12 relative
 }
 
-.searchBar {
+.searchBarEl {
     @apply w-full h-10 p-2 border-b-4 border-[#B8D9FF] bg-quatery focus:outline-none placeholder:text-sm focus:placeholder:text-quatery
 }
 
-.searchBar:focus-within {
+.searchBarEl:focus-within {
     @apply border-primary transition ease-out delay-75
 }
 

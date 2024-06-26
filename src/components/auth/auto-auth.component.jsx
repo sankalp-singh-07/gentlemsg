@@ -29,6 +29,7 @@ const AutoAuth = () => {
 							});
 						} else {
 							await setDoc(userRef, {
+								id: user.uid,
 								name: user.displayName,
 								email: user.email,
 								photoURL: user.photoURL,
@@ -36,6 +37,7 @@ const AutoAuth = () => {
 								isOnline: true,
 								friends: [],
 								blocked: [],
+								requests: [],
 							});
 						}
 					} else {

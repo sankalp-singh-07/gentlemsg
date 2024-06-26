@@ -23,11 +23,11 @@ const Sidebar = () => {
 			</div>
 			<div className="mid">
 				<div className="userActions">
-					<div className="search">
+					<div className="searchEl">
 						<input
 							type="text"
 							placeholder="Search Users"
-							className="searchBar"
+							className="searchBarEl"
 						/>
 						<div className="underline"></div>
 					</div>

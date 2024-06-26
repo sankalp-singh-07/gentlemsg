@@ -8,7 +8,7 @@ const Status = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
 	useEffect(() => {
 		if (currentUser) {
-			const userRef = doc(db, 'users', currentUser.uid);
+			const userRef = doc(db, 'users', currentUser.id);
 
 			const setOffline = async () => {
 				await updateDoc(userRef, {

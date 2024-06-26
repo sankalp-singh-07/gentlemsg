@@ -20,7 +20,7 @@ function App() {
 			if (user) {
 				dispatch(
 					setCurrentUser({
-						uid: user.uid,
+						id: user.uid,
 						name: user.displayName,
 						email: user.email,
 						photoURL: user.photoURL,
