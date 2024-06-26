@@ -1,8 +1,8 @@
-import React from 'react';
 import './sidebar.css';
 import UserChats from './childComponents/userChats.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
+import DropDownSetting from '../dropdown/dropdown.setting';
 
 const Sidebar = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -55,11 +55,11 @@ const Sidebar = () => {
 			<div className="border-b-4 border-[#B8D9FF]"></div>
 			<div className="end">
 				<div className="userProfile">
-					<div className="userProfileImg">
+					<div className="w-11 h-11 rounded-full mr-2 cursor-pointer hover:opacity-50">
 						<img
 							src={currentUser.photoURL}
 							alt="user"
-							className="avatar"
+							className="w-full h-full rounded-full object-cover"
 						/>
 					</div>
 					<div className="userProfileInfo">
@@ -69,11 +69,7 @@ const Sidebar = () => {
 					</div>
 				</div>
 				<div className="setting">
-					<img
-						src="src\assets\gear.png"
-						alt="settings"
-						className="settingsImg"
-					/>
+					<DropDownSetting />
 				</div>
 			</div>
 		</div>

@@ -8,7 +8,7 @@ import {
 import { db } from '../../utils/firebase';
 
 export const sendRequest = async (senderId, receiverId) => {
-	const senderId = doc(db, 'users', senderId);
+	const senderRef = doc(db, 'users', senderId);
 	const receiverRef = doc(db, 'users', receiverId);
 	const req = {
 		senderId: senderId,
@@ -17,6 +17,9 @@ export const sendRequest = async (senderId, receiverId) => {
 		timeStamp: serverTimestamp(),
 	};
 	await updateDoc(receiverRef, {
+		requests: arrayUnion(req),
+	});
+	await updateDoc(senderRef, {
 		requests: arrayUnion(req),
 	});
 };
