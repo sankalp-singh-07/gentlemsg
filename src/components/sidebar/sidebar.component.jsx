@@ -3,9 +3,12 @@ import UserChats from './childComponents/userChats.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import DropDownSetting from '../dropdown/dropdown.setting';
+import AddUser from '../addUser/addUser.component';
+import { useState } from 'react';
 
 const Sidebar = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
+	const [addUser, setAddUser] = useState(false);
 
 	return (
 		<div className="sidebar">
@@ -32,9 +35,12 @@ const Sidebar = () => {
 						<div className="underline"></div>
 					</div>
 					<div className="addNewUser ml-2">
-						<button className="addUser">
+						<button
+							className="addUser"
+							onClick={() => setAddUser(!addUser)}
+						>
 							<span className="font-bold text-3xl absolute top-0 bottom-0 right-0 left-0">
-								+
+								{addUser ? '-' : '+'}
 							</span>
 						</button>
 					</div>
@@ -72,6 +78,7 @@ const Sidebar = () => {
 					<DropDownSetting />
 				</div>
 			</div>
+			{addUser && <AddUser />}
 		</div>
 	);
 };
