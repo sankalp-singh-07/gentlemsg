@@ -25,6 +25,7 @@ const friendDataSlice = createSlice({
 			.addCase(sendRequests.rejected, (state, action) => {
 				state.status = 'failed';
 				state.error = action.error.message;
+				console.log('Failed to send request:', action);
 			})
 			.addCase(acceptRequest.fulfilled, (state, action) => {
 				state.friends.push(action.payload.senderId);

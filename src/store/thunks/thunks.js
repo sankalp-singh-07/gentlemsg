@@ -15,10 +15,10 @@ export const sendRequests = createAsyncThunk(
 		const receiverRef = doc(db, 'users', receiverId);
 
 		const ref = {
-			senderId: senderRef,
-			receiverId: receiverRef,
+			senderId: senderRef.id,
+			receiverId: receiverRef.id,
 			status: 'pending',
-			createdAt: serverTimestamp(),
+			createdAt: Date.now(),
 		};
 
 		await updateDoc(senderRef, {
