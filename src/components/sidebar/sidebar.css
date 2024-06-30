@@ -15,7 +15,7 @@
 }
 
 .mid {
-    @apply flex items-center justify-between w-full pt-2 px-4 flex-col h-[79%]
+    @apply flex items-center justify-between w-full pt-2 px-2 flex-col h-[79%]
 }
 
 .userActions {
@@ -48,11 +48,11 @@
 }
 
 .userChats {
-    @apply flex flex-col w-full h-full overflow-y-scroll mt-3 text-black
+    @apply flex flex-col w-full h-full overflow-y-scroll text-black
 }
 
 .userChat {
-    @apply flex items-center w-full h-14
+    @apply flex items-center w-full h-16 cursor-pointer 
 }
 
 .userChatImg {
