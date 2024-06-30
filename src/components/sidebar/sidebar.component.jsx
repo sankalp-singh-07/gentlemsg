@@ -3,12 +3,12 @@ import UserChats from './childComponents/userChats.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import DropDownSetting from '../dropdown/dropdown.setting';
-import AddUser from '../addUser/addUser.component';
+import SearchFriends from '../friends/searchFriends.component';
 import { useState } from 'react';
 
 const Sidebar = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
-	const [addUser, setAddUser] = useState(false);
+	const [searchFriends, setSearchFriends] = useState(false);
 
 	return (
 		<div className="sidebar">
@@ -37,10 +37,10 @@ const Sidebar = () => {
 					<div className="addNewUser ml-2">
 						<button
 							className="addUser"
-							onClick={() => setAddUser(!addUser)}
+							onClick={() => setSearchFriends(!searchFriends)}
 						>
 							<span className="font-bold text-3xl absolute top-0 bottom-0 right-0 left-0">
-								{addUser ? '-' : '+'}
+								{searchFriends ? '-' : '+'}
 							</span>
 						</button>
 					</div>
@@ -78,7 +78,7 @@ const Sidebar = () => {
 					<DropDownSetting />
 				</div>
 			</div>
-			{addUser && <AddUser />}
+			{searchFriends && <SearchFriends />}
 		</div>
 	);
 };

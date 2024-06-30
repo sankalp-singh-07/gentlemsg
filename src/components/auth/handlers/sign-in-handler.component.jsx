@@ -10,6 +10,8 @@ import {
 import { setCookie } from '../../../utils/cookies';
 
 const SignInHandler = async () => {
+	const userNameCreate = (name) => name.split(' ')[0].toLowerCase();
+
 	try {
 		const result = await signInWithPopup(auth, googleProvider);
 		const user = result.user;
@@ -38,6 +40,7 @@ const SignInHandler = async () => {
 						friends: [],
 						blocked: [],
 						requests: [],
+						userName: userNameCreate(user.displayName),
 					},
 					{ merge: true }
 				);

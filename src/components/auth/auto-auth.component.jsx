@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 
 const AutoAuth = () => {
+	const userNameCreate = (name) => name.split(' ')[0].toLowerCase();
+
 	useEffect(() => {
 		const autoLogged = async () => {
 			const token = getCookie();
@@ -38,6 +40,7 @@ const AutoAuth = () => {
 								friends: [],
 								blocked: [],
 								requests: [],
+								userName: userNameCreate(user.displayName),
 							});
 						}
 					} else {
