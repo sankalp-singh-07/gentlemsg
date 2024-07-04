@@ -1,5 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { sendRequests, acceptRequest, rejectRequest } from '../thunks/thunks';
+import {
+	sendRequests,
+	acceptRequest,
+	rejectRequest,
+	getInitialData,
+} from '../thunks/thunks';
 
 const INITIAL_STATE = {
 	friends: [],
@@ -15,6 +20,19 @@ const friendDataSlice = createSlice({
 	reducers: {},
 	extraReducers: (builder) => {
 		builder
+			.addCase(getInitialData.pending, (state) => {
+				state.status = 'loading';
+			})
+			.addCase(getInitialData.fulfilled, (state, action) => {
+				state.friends = action.payload.friends || [];
+				state.blocked = action.payload.blocked || [];
+				state.requests = action.payload.requests || [];
+				state.status = 'success';
+			})
+			.addCase(getInitialData.rejected, (state, action) => {
+				state.status = 'failed';
+				state.error = action.error.message;
+			})
 			.addCase(sendRequests.pending, (state) => {
 				state.status = 'loading';
 			})
