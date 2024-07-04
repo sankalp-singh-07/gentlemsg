@@ -64,7 +64,7 @@ const Sidebar = () => {
 					<div className="w-11 h-11 rounded-full mr-2 cursor-pointer hover:opacity-50">
 						<img
 							src={currentUser.photoURL}
-							alt="user"
+							alt="..."
 							className="w-full h-full rounded-full object-cover"
 						/>
 					</div>

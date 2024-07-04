@@ -3,11 +3,20 @@ import UsersManagement from '../friends/usersManage.component';
 import { useContext, useEffect } from 'react';
 import { FriendsDialogContext } from '../../context/friendsDialog.context';
 import { useRef } from 'react';
+import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
+import { getInitialData } from '../../store/thunks/thunks';
+import { selectCurrentUser } from '../../store/user/user.selector';
 
 const Admin = () => {
 	const { openDialog, setOpenDialog } = useContext(FriendsDialogContext);
 	const dialogRef = useRef();
-	console.log(openDialog);
+	const dispatch = useDispatch();
+	const { currentUser } = useSelector(selectCurrentUser);
+
+	useEffect(() => {
+		if (currentUser) dispatch(getInitialData(currentUser.id));
+	}, [currentUser, dispatch]);
 
 	useEffect(() => {
 		const handleDialog = (e) => {

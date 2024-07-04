@@ -8,6 +8,19 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 
+export const getInitialData = createAsyncThunk(
+	'friendData/getInitialData',
+	async (userId) => {
+		const userRef = doc(db, 'users', userId);
+		const userSnap = await getDoc(userRef);
+
+		if (userSnap.exists()) {
+			const { friends, requests, blocked } = userSnap.data();
+			return { friends, requests, blocked };
+		} else throw new Error('User not exists');
+	}
+);
+
 export const sendRequests = createAsyncThunk(
 	'friendData/sendRequests',
 	async ({ senderId, receiverId }) => {

@@ -6,17 +6,40 @@ import { useState } from 'react';
 
 const UsersManagement = () => {
 	const { setOpenDialog } = useContext(FriendsDialogContext);
+	const [activeSection, setActiveSection] = useState('friends');
+
+	const handleSectionChange = (section) => {
+		setActiveSection(section);
+	};
 
 	return (
-		<div className="bg-secondary max-sm:w-9/12 w-6/12 h-3/5 rounded-md absolute m-auto p-4 top-0 right-0 bottom-0 left-0">
-			<FriendsList />
-			<Requests />
-			<button
-				className="py-1 px-2 text-sm font-semibold hover:text-quatery bg-quatery hover:bg-primary rounded-full border-2"
-				onClick={() => setOpenDialog(false)}
-			>
-				X
-			</button>
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
+			<div className="grid grid-cols-2 md:grid-cols-2 border-black border-b-4">
+				<button
+					className="flex items-center justify-center h-fit py-2 bg-gray-200 border-r-2 border-black"
+					onClick={() => handleSectionChange('friends')}
+				>
+					Friends
+				</button>
+				<button
+					className="flex items-center justify-center h-fit py-2 bg-gray-200 border-l-2 border-black"
+					onClick={() => handleSectionChange('requests')}
+				>
+					Requests
+				</button>
+			</div>
+			<div>
+				{activeSection === 'friends' && <FriendsList />}
+				{activeSection === 'requests' && <Requests />}
+			</div>
+			<div className="flex flex-1 justify-between items-center absolute bottom-0 left-0 right-0">
+				<button
+					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
+					onClick={() => setOpenDialog(false)}
+				>
+					Close
+				</button>
+			</div>
 		</div>
 	);
 };
