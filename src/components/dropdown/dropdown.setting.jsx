@@ -77,7 +77,7 @@ const DropDownSetting = () => {
 							Notifications
 						</li>
 						<li
-							className="hover:bg-quatery pl-4 py-3 rounded-md cursor-pointer"
+							className="hover:bg-red-500 hover:text-tertiary pl-4 py-3 rounded-md cursor-pointer"
 							onClick={handleLogOut}
 						>
 							Log Out
