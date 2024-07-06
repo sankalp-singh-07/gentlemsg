@@ -1,16 +1,23 @@
 import Dashboard from '../dashboard/dashboard.component';
 import UsersManagement from '../friends/usersManage.component';
 import { useContext, useEffect } from 'react';
-import { FriendsDialogContext } from '../../context/friendsDialog.context';
+import { DialogContext } from '../../context/dialog.context';
 import { useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { getInitialData } from '../../store/thunks/thunks';
 import { selectCurrentUser } from '../../store/user/user.selector';
+import Notifications from '../Notifs/notifs.component';
 
 const Admin = () => {
-	const { openDialog, setOpenDialog } = useContext(FriendsDialogContext);
-	const dialogRef = useRef();
+	const {
+		openFriendsDialog,
+		openNotifsDialog,
+		setOpenFriendsDialog,
+		setOpenNotifsDialog,
+	} = useContext(DialogContext);
+	const friendsDialogRef = useRef();
+	const notifsDialogRef = useRef();
 	const dispatch = useDispatch();
 	const { currentUser } = useSelector(selectCurrentUser);
 
@@ -23,22 +30,46 @@ const Admin = () => {
 	}, [dispatch, currentUser]);
 
 	useEffect(() => {
-		const handleDialog = (e) => {
-			if (dialogRef.current && !dialogRef.current.contains(e.target))
-				setOpenDialog(false);
+		const handleFriendsDialog = (e) => {
+			if (
+				friendsDialogRef.current &&
+				!friendsDialogRef.current.contains(e.target)
+			)
+				setOpenFriendsDialog(false);
 		};
 
-		window.addEventListener('click', handleDialog);
+		window.addEventListener('click', handleFriendsDialog);
 
 		return () => {
-			window.addEventListener('click', handleDialog);
+			window.addEventListener('click', handleFriendsDialog);
 		};
-	}, [setOpenDialog]);
+	}, [setOpenFriendsDialog]);
+
+	useEffect(() => {
+		const handleNotifsDialog = (e) => {
+			if (
+				notifsDialogRef.current &&
+				!notifsDialogRef.current.contains(e.target)
+			)
+				setOpenNotifsDialog(false);
+		};
+
+		window.addEventListener('click', handleNotifsDialog);
+
+		return () => {
+			window.addEventListener('click', handleNotifsDialog);
+		};
+	}, [setOpenNotifsDialog]);
 
 	return (
 		<div className="w-screen h-screen flex">
 			<Dashboard />
-			<div ref={dialogRef}>{openDialog && <UsersManagement />}</div>
+			<div ref={friendsDialogRef}>
+				{openFriendsDialog && <UsersManagement />}
+			</div>
+			<div ref={notifsDialogRef}>
+				{openNotifsDialog && <Notifications />}
+			</div>
 		</div>
 	);
 };
