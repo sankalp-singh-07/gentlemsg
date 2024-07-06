@@ -74,10 +74,7 @@ const Requests = () => {
 	return (
 		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4">
 			{data.map((el) => {
-				if (
-					currentUser.id === el.receiver.id &&
-					el.receiver.status !== 'rejected'
-				) {
+				if (currentUser.id === el.receiver.id) {
 					return (
 						<div
 							key={el.sender.id}
@@ -117,6 +114,7 @@ const Requests = () => {
 				if (currentUser.id === el.sender.id) {
 					return (
 						<div
+							key={el.receiver.id}
 							className={`flex bg-quatery p-4 rounded shadow-md items-center justify-between ${
 								el.receiver.status === 'rejected' &&
 								'bg-slate-400'

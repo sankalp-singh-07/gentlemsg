@@ -64,6 +64,12 @@ const DropDownSetting = () => {
 							Friends
 						</li>
 						<li
+							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
+							onClick={() => setShowDropDownSettings(false)}
+						>
+							Notifications
+						</li>
+						<li
 							className="hover:bg-quatery pl-4 py-3 rounded-md cursor-pointer"
 							onClick={handleLogOut}
 						>

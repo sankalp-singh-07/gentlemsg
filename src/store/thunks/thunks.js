@@ -1,23 +1,35 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import {
 	doc,
-	getDoc,
 	updateDoc,
+	getDoc,
+	onSnapshot,
 	arrayUnion,
-	serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
+import { updateFriendData } from '../friends/friends.reducer';
 
 export const getInitialData = createAsyncThunk(
 	'friendData/getInitialData',
-	async (userId) => {
+	async (userId, { dispatch }) => {
 		const userRef = doc(db, 'users', userId);
-		const userSnap = await getDoc(userRef);
 
-		if (userSnap.exists()) {
-			const { friends, requests, blocked } = userSnap.data();
-			return { friends, requests, blocked };
-		} else throw new Error('User not exists');
+		return new Promise((resolve, reject) => {
+			const unsubscribe = onSnapshot(userRef, (docSnap) => {
+				if (docSnap.exists()) {
+					const { friends, requests, blocked, notifs } =
+						docSnap.data();
+					dispatch(
+						updateFriendData({ friends, requests, blocked, notifs })
+					);
+					resolve();
+				} else {
+					reject(new Error('User does not exist'));
+				}
+			});
+
+			return () => unsubscribe();
+		});
 	}
 );
 
@@ -59,18 +71,16 @@ export const acceptRequest = createAsyncThunk(
 			const userRequests = userSnap.data().requests;
 			const senderRequests = senderSnap.data().requests;
 
-			const userRequestsUpdate = userRequests.map((req) => {
-				if (req.senderId === senderId && req.receiverId === userId) {
-					return { ...req, status: 'accepted' };
-				}
-				return req;
+			const userRequestsUpdate = userRequests.filter((req) => {
+				return !(
+					req.senderId === senderId && req.receiverId === userId
+				);
 			});
 
-			const senderRequestsUpdate = senderRequests.map((req) => {
-				if (req.senderId === senderId && req.receiverId === userId) {
-					return { ...req, status: 'accepted' };
-				}
-				return req;
+			const senderRequestsUpdate = senderRequests.filter((req) => {
+				return !(
+					req.senderId === senderId && req.receiverId === userId
+				);
 			});
 
 			await updateDoc(userRef, {
@@ -81,6 +91,11 @@ export const acceptRequest = createAsyncThunk(
 			await updateDoc(senderRef, {
 				friends: arrayUnion(userId),
 				requests: senderRequestsUpdate,
+				notifs: arrayUnion({
+					type: 'accepted',
+					from: userId,
+					createdAt: Date.now(),
+				}),
 			});
 
 			return {
@@ -106,28 +121,29 @@ export const rejectRequest = createAsyncThunk(
 			const userRequests = userSnap.data().requests;
 			const senderRequests = senderSnap.data().requests;
 
-			const userRequestsUpdate = userRequests.map((req) => {
-				if (req.senderId === senderId && req.receiverId === userId) {
-					return { ...req, status: 'rejected' };
-				}
-				return req;
+			const userRequestsUpdate = userRequests.filter((req) => {
+				return !(
+					req.senderId === senderId && req.receiverId === userId
+				);
 			});
 
-			const senderRequestsUpdate = senderRequests.map((req) => {
-				if (req.senderId === senderId && req.receiverId === userId) {
-					return { ...req, status: 'rejected' };
-				}
-				return req;
+			const senderRequestsUpdate = senderRequests.filter((req) => {
+				return !(
+					req.senderId === senderId && req.receiverId === userId
+				);
 			});
 
 			await updateDoc(userRef, {
-				friends: arrayUnion(senderId),
 				requests: userRequestsUpdate,
 			});
 
 			await updateDoc(senderRef, {
-				friends: arrayUnion(userId),
 				requests: senderRequestsUpdate,
+				notifs: arrayUnion({
+					type: 'rejected',
+					from: userId,
+					createdAt: Date.now(),
+				}),
 			});
 
 			return {

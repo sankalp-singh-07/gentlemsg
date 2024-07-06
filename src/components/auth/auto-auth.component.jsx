@@ -40,6 +40,7 @@ const AutoAuth = () => {
 								friends: [],
 								blocked: [],
 								requests: [],
+								notifs: [],
 								userName: userNameCreate(user.displayName),
 							});
 						}

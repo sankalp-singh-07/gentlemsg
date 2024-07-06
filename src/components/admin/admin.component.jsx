@@ -15,8 +15,12 @@ const Admin = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
 
 	useEffect(() => {
-		if (currentUser) dispatch(getInitialData(currentUser.id));
-	}, [currentUser, dispatch]);
+		const promise = dispatch(getInitialData(currentUser.id));
+
+		return () => {
+			promise.abort();
+		};
+	}, [dispatch, currentUser]);
 
 	useEffect(() => {
 		const handleDialog = (e) => {
