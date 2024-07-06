@@ -10,6 +10,7 @@ const INITIAL_STATE = {
 	friends: [],
 	requests: [],
 	blocked: [],
+	notifs: [],
 	status: 'idle',
 	error: null,
 };
@@ -17,17 +18,20 @@ const INITIAL_STATE = {
 const friendDataSlice = createSlice({
 	name: 'friendData',
 	initialState: INITIAL_STATE,
-	reducers: {},
+	reducers: {
+		updateFriendData: (state, action) => {
+			const { friends, requests, blocked, notifs } = action.payload;
+			state.friends = friends;
+			state.blocked = blocked;
+			state.requests = requests;
+			state.notifs = notifs;
+			state.status = 'success';
+		},
+	},
 	extraReducers: (builder) => {
 		builder
 			.addCase(getInitialData.pending, (state) => {
 				state.status = 'loading';
-			})
-			.addCase(getInitialData.fulfilled, (state, action) => {
-				state.friends = action.payload.friends || [];
-				state.blocked = action.payload.blocked || [];
-				state.requests = action.payload.requests || [];
-				state.status = 'success';
 			})
 			.addCase(getInitialData.rejected, (state, action) => {
 				state.status = 'failed';
@@ -55,4 +59,5 @@ const friendDataSlice = createSlice({
 	},
 });
 
+export const { updateFriendData } = friendDataSlice.actions;
 export const friendDataReducer = friendDataSlice.reducer;

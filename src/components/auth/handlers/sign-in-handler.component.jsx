@@ -40,6 +40,7 @@ const SignInHandler = async () => {
 						friends: [],
 						blocked: [],
 						requests: [],
+						notifs: [],
 						userName: userNameCreate(user.displayName),
 					},
 					{ merge: true }
