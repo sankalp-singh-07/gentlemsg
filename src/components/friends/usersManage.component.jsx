@@ -1,11 +1,11 @@
 import React, { useContext } from 'react';
 import FriendsList from './friendsList.component';
 import Requests from './requests.component';
-import { FriendsDialogContext } from '../../context/friendsDialog.context';
+import { DialogContext } from '../../context/dialog.context';
 import { useState } from 'react';
 
 const UsersManagement = () => {
-	const { setOpenDialog } = useContext(FriendsDialogContext);
+	const { setOpenFriendsDialog } = useContext(DialogContext);
 	const [activeSection, setActiveSection] = useState('friends');
 
 	const handleSectionChange = (section) => {
@@ -35,7 +35,7 @@ const UsersManagement = () => {
 			<div className="flex flex-1 justify-between items-center absolute bottom-0 left-0 right-0">
 				<button
 					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
-					onClick={() => setOpenDialog(false)}
+					onClick={() => setOpenFriendsDialog(false)}
 				>
 					Close
 				</button>

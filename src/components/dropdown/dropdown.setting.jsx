@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRef } from 'react';
 import SignOutHandler from '../auth/handlers/sign-out-handler.component';
 import { useContext } from 'react';
-import { FriendsDialogContext } from '../../context/friendsDialog.context';
+import { DialogContext } from '../../context/dialog.context';
 
 const DropDownSetting = () => {
 	const [showDropDownSettings, setShowDropDownSettings] = useState(false);
@@ -10,7 +10,8 @@ const DropDownSetting = () => {
 	const imgRef = useRef();
 	const menuRef = useRef();
 
-	const { setOpenDialog } = useContext(FriendsDialogContext);
+	const { setOpenFriendsDialog, setOpenNotifsDialog } =
+		useContext(DialogContext);
 
 	const handleIconClick = () => {
 		setShowDropDownSettings(!showDropDownSettings);
@@ -25,7 +26,13 @@ const DropDownSetting = () => {
 	const handleFriendsDialog = (e) => {
 		e.stopPropagation();
 		setShowDropDownSettings(false);
-		setOpenDialog(true);
+		setOpenFriendsDialog(true);
+	};
+
+	const handleNotifsDialog = (e) => {
+		e.stopPropagation();
+		setShowDropDownSettings(false);
+		setOpenNotifsDialog(true);
 	};
 
 	useEffect(() => {
@@ -65,7 +72,7 @@ const DropDownSetting = () => {
 						</li>
 						<li
 							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
-							onClick={() => setShowDropDownSettings(false)}
+							onClick={(e) => handleNotifsDialog(e)}
 						>
 							Notifications
 						</li>
