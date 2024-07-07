@@ -13,7 +13,7 @@ const UsersManagement = () => {
 	};
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-7/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
 			<div className="grid grid-cols-2 md:grid-cols-2 border-black border-b-4">
 				<button
 					className="flex items-center justify-center h-fit py-2 bg-gray-200 border-r-2 border-black"

@@ -72,7 +72,7 @@ const Requests = () => {
 		);
 
 	return (
-		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4">
+		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll">
 			{data.map((el) => {
 				if (currentUser.id === el.receiver.id) {
 					return (
@@ -115,10 +115,7 @@ const Requests = () => {
 					return (
 						<div
 							key={el.receiver.id}
-							className={`flex bg-quatery p-4 rounded shadow-md items-center justify-between ${
-								el.receiver.status === 'rejected' &&
-								'bg-slate-400'
-							}`}
+							className="flex bg-quatery p-4 rounded shadow-md items-center justify-between"
 						>
 							<div
 								key={el.receiver.id}
