@@ -5,6 +5,7 @@ import { DialogContext } from '../../context/dialog.context';
 import { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
+import './notifs.styles.css';
 
 const Notifications = () => {
 	const { notifs } = useSelector(friendSelector);
@@ -51,13 +52,13 @@ const Notifications = () => {
 	return (
 		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
 			<div
-				className="h-full overflow-scroll p-4 grid gap-4 grid-flow-row"
+				className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row"
 				style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}
 			>
 				{notifications.map((notif, index) => (
 					<div
 						key={index}
-						className="flex bg-tertiary px-4 py-2 justify-between items-center gap-2 rounded-md w-full"
+						className="flex bg-tertiary px-4 py-2 justify-between items-center gap-2 rounded-md w-full h-fit"
 					>
 						<div className="flex justify-self-start items-center gap-3 min-w-36 mr-3">
 							<img
