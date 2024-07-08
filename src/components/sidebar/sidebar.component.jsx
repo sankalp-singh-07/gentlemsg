@@ -4,11 +4,23 @@ import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import DropDownSetting from '../dropdown/dropdown.setting';
 import SearchFriends from '../friends/searchFriends.component';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import ProfilePicture from '../profile/profilePicture.component';
 
 const Sidebar = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
 	const [searchFriends, setSearchFriends] = useState(false);
+	const imageUploadRef = useRef(null);
+	const [file, setFile] = useState(null);
+
+	const handleUpload = () => {
+		imageUploadRef.current.click();
+	};
+
+	const handleImageUpload = (e) => {
+		const file = e.target.files[0];
+		setFile(file);
+	};
 
 	return (
 		<div className="sidebar">
@@ -66,6 +78,13 @@ const Sidebar = () => {
 							src={currentUser.photoURL}
 							alt="..."
 							className="w-full h-full rounded-full object-cover"
+							onClick={handleUpload}
+						/>
+						<input
+							type="file"
+							className="hidden"
+							ref={imageUploadRef}
+							onChange={(e) => handleImageUpload(e)}
 						/>
 					</div>
 					<div className="userProfileInfo">
@@ -79,6 +98,7 @@ const Sidebar = () => {
 				</div>
 			</div>
 			{searchFriends && <SearchFriends />}
+			<ProfilePicture file={file} />
 		</div>
 	);
 };
