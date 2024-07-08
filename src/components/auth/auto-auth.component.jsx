@@ -43,6 +43,10 @@ const AutoAuth = () => {
 								notifs: [],
 								userName: userNameCreate(user.displayName),
 							});
+
+							await setDoc(doc(db, 'userChats', user.uid), {
+								chats: [],
+							});
 						}
 					} else {
 						await signOut(auth);
