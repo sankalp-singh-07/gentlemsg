@@ -29,7 +29,9 @@ const AutoAuth = () => {
 								lastActive: serverTimestamp(),
 							});
 						} else {
-							await setDoc(userRef, {
+							const batch = db.batch();
+
+							batch.set(userRef, {
 								id: user.uid,
 								name: user.displayName,
 								email: user.email,
@@ -43,9 +45,13 @@ const AutoAuth = () => {
 								userName: userNameCreate(user.displayName),
 							});
 
-							await setDoc(userRef, {
+							const userChatsRef = doc(db, 'userChats', user.uid);
+
+							batch.set(userChatsRef, {
 								chats: [],
 							});
+
+							await batch.commit();
 						}
 					} else {
 						await signOut(auth);
