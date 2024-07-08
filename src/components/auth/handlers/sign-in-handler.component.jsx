@@ -28,27 +28,29 @@ const SignInHandler = async () => {
 					lastActive: serverTimestamp(),
 				});
 			} else {
-				await setDoc(
-					doc(db, 'users', user.uid),
-					{
-						id: user.uid,
-						name: user.displayName,
-						email: user.email,
-						photoURL: user.photoURL,
-						lastActive: serverTimestamp(),
-						isOnline: true,
-						friends: [],
-						blocked: [],
-						requests: [],
-						notifs: [],
-						userName: userNameCreate(user.displayName),
-					},
-					{ merge: true }
-				);
+				const batch = db.batch();
 
-				await setDoc(doc(db, 'userChats', user.uid), {
+				batch.set(userRef, {
+					id: user.uid,
+					name: user.displayName,
+					email: user.email,
+					photoURL: user.photoURL,
+					lastActive: serverTimestamp(),
+					isOnline: true,
+					friends: [],
+					blocked: [],
+					requests: [],
+					notifs: [],
+					userName: userNameCreate(user.displayName),
+				});
+
+				const userChatsRef = doc(db, 'userChats', user.uid);
+
+				batch.set(userChatsRef, {
 					chats: [],
 				});
+
+				await batch.commit();
 			}
 		}
 	} catch (error) {
