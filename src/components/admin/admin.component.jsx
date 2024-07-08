@@ -7,7 +7,7 @@ import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { getInitialData } from '../../store/thunks/thunks';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import Notifications from '../Notifs/notifs.component';
+import Notifications from '../notifs/notifs.component';
 
 const Admin = () => {
 	const {
