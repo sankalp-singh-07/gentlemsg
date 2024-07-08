@@ -21,7 +21,6 @@ const AutoAuth = () => {
 					await signInWithCustomToken(auth, token);
 					const user = auth.currentUser;
 					if (user) {
-						console.log(user);
 						const userRef = doc(db, 'users', user.uid);
 						const userSnapshot = await getDoc(userRef);
 						if (userSnapshot.exists()) {
@@ -44,7 +43,7 @@ const AutoAuth = () => {
 								userName: userNameCreate(user.displayName),
 							});
 
-							await setDoc(doc(db, 'userChats', user.uid), {
+							await setDoc(userRef, {
 								chats: [],
 							});
 						}

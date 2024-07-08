@@ -20,8 +20,6 @@ const Chat = ({ inMobile }) => {
 		textBoxRef.current.focus();
 	};
 
-	console.log(text);
-
 	return (
 		<div
 			className={`chat ${inMobile === 'hidden' && 'max-[650px]:hidden'}`}
