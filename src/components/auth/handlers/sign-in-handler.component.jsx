@@ -45,6 +45,10 @@ const SignInHandler = async () => {
 					},
 					{ merge: true }
 				);
+
+				await setDoc(doc(db, 'userChats', user.uid), {
+					chats: [],
+				});
 			}
 		}
 	} catch (error) {
