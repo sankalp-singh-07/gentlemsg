@@ -20,7 +20,7 @@ export const userChat = async (currentUserId, receiverId) => {
 			lastMessage: 'Start Conversation',
 			chatId: chatId,
 			isSeen: false,
-			sentAt: serverTimestamp(),
+			sentAt: Date.now(),
 		}),
 	};
 
@@ -30,7 +30,7 @@ export const userChat = async (currentUserId, receiverId) => {
 			lastMessage: 'Start Conversation',
 			chatId: chatId,
 			isSeen: false,
-			sentAt: serverTimestamp(),
+			sentAt: Date.now(),
 		}),
 	};
 

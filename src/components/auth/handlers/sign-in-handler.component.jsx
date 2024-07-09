@@ -6,6 +6,7 @@ import {
 	serverTimestamp,
 	getDoc,
 	updateDoc,
+	writeBatch,
 } from 'firebase/firestore';
 import { setCookie } from '../../../utils/cookies';
 
@@ -28,7 +29,7 @@ const SignInHandler = async () => {
 					lastActive: serverTimestamp(),
 				});
 			} else {
-				const batch = db.batch();
+				const batch = writeBatch(db);
 
 				batch.set(userRef, {
 					id: user.uid,
