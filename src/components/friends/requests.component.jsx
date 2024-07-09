@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import { acceptRequest, rejectRequest } from '../../store/thunks/thunks';
+import { userChat } from '../messages/userChat';
 
 const Requests = () => {
 	const { requests } = useSelector(friendSelector);
@@ -58,6 +59,7 @@ const Requests = () => {
 
 	const handleAccept = (senderId) => {
 		dispatch(acceptRequest({ userId: currentUser.id, senderId }));
+		userChat(currentUser.id, senderId);
 	};
 
 	const handleReject = (senderId) => {
@@ -72,7 +74,7 @@ const Requests = () => {
 		);
 
 	return (
-		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll">
+		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll scrollbar-hide">
 			{data.map((el) => {
 				if (currentUser.id === el.receiver.id) {
 					return (

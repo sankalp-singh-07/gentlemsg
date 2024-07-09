@@ -40,10 +40,15 @@ const FriendsList = () => {
 
 	myFriends.map((el) => console.log(el.name));
 
-	if (loading) return <h1>Loading...</h1>;
+	if (loading) {
+		setTimeout(() => {
+			setLoading(false);
+		}, 15000);
+		return <h1>Loading...</h1>;
+	}
 
 	return (
-		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll">
+		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll scrollbar-hide">
 			{myFriends.map((friend, index) => (
 				<div
 					key={index}
