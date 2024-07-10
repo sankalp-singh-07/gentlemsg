@@ -4,7 +4,7 @@ import { db } from '../../utils/firebase';
 
 const INITIAL_STATE = {
 	chats: [],
-	loading: false,
+	loading: true,
 	error: null,
 };
 

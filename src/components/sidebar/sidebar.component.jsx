@@ -59,15 +59,6 @@ const Sidebar = () => {
 				</div>
 				<div className="userChats scrollbar-hide">
 					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
-					<UserChats />
 				</div>
 			</div>
 			<div className="border-b-4 border-[#B8D9FF]"></div>

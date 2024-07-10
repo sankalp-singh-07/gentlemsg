@@ -76,7 +76,7 @@
 }
 
 .userChatDetails {
-    @apply flex items-end w-1/12 justify-between flex-col font-normal text-sm
+    @apply flex items-end w-1/12 justify-between flex-col font-normal
 }
 
 .userChatNotif {
