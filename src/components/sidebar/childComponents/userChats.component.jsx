@@ -1,7 +1,27 @@
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { selectChats } from '../../../store/chats/chats.selector';
+import { useDispatch } from 'react-redux';
+import { fetchChats } from '../../../store/chats/chats.reducer';
+import { selectCurrentUser } from '../../../store/user/user.selector';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../utils/firebase';
 
 const UserChats = () => {
+	const { chats, loading, error } = useSelector(selectChats);
+	const { currentUser } = useSelector(selectCurrentUser);
+
+	const [userData, setUserData] = useState([]);
+
+	const userId = currentUser.id;
+
+	const dispatch = useDispatch();
+
+	useEffect(() => {
+		dispatch(fetchChats(userId));
+	}, [dispatch, userId]);
+
 	const navigate = useNavigate();
 
 	const handleClick = () => {
@@ -12,30 +32,96 @@ const UserChats = () => {
 		}
 	};
 
+	useEffect(() => {
+		for (let i = 0; i < chats.length; i++) {
+			const receiverId = chats[i].receiverId;
+
+			const fetchData = async (receiverId) => {
+				const receiverRef = doc(db, 'users', receiverId);
+				const receiverSnap = await getDoc(receiverRef);
+
+				if (receiverSnap.exists()) {
+					const receiver = receiverSnap.data();
+					return { id: receiverId, ...receiver };
+				}
+			};
+
+			const fetchUsersData = async () => {
+				const userDataArray = await Promise.all(
+					chats.map((chat) => fetchData(chat.receiverId))
+				);
+				setUserData(userDataArray);
+			};
+
+			if (chats.length) {
+				fetchUsersData();
+			}
+		}
+	}, [chats]);
+
+	const fetchData = async (receiverId) => {
+		const receiverRef = doc(db, 'users', receiverId);
+		const receiverSnap = await getDoc(receiverRef);
+
+		if (receiverSnap.exists()) {
+			const receiver = receiverSnap.data();
+			return { id: receiverId, ...receiver };
+		}
+	};
+
+	const getDate = (timeStamp) => {
+		const date = new Date(timeStamp);
+		const options = { day: 'numeric', month: 'short' };
+		return new Intl.DateTimeFormat('en-US', options).format(date);
+	};
+
+	if (loading) return <h1>Loading...</h1>;
+	if (error) return <h1>{error}</h1>;
+
 	return (
-		<div className="py-2" onClick={handleClick}>
-			<div className="userChat hover:bg-tertiary px-2 py-2 rounded-md">
-				<div className="userChatImg">
-					<img
-						src="src\assets\profile.jpg"
-						alt="user"
-						className="avatar"
-					/>
-				</div>
-				<div className="userChatInfo">
-					<div className="userName">
-						<h1>John Doe</h1>
+		<>
+			{chats.map((chat, index) => {
+				const user = userData.find(
+					(user) => user.id === chat.receiverId
+				);
+
+				return (
+					<div className="py-2" onClick={handleClick} key={index}>
+						<div
+							className={`userChat hover:bg-tertiary px-2 py-2 rounded-md ${
+								chat.isSeen ? 'bg-tertiary' : 'bg-sky-200'
+							}`}
+						>
+							<div className="userChatImg">
+								{user ? (
+									<img
+										src={user.photoURL}
+										alt="..."
+										className="avatar"
+									/>
+								) : (
+									<h1>?</h1>
+								)}
+							</div>
+							<div className="userChatInfo">
+								<div className="userName">
+									{user ? <h1>{user.name}</h1> : <h1>...</h1>}
+								</div>
+								<div className="userMessage">
+									<p>{chat.lastMessage.slice(0, 20)}</p>
+								</div>
+							</div>
+							<div className="userChatDetails">
+								<div className="text-xs">
+									{getDate(chat.sentAt)}
+								</div>
+								{/* <div className="userChatNotif">5</div> */}
+							</div>
+						</div>
 					</div>
-					<div className="userMessage">
-						<p>Hey! How are you?</p>
-					</div>
-				</div>
-				<div className="userChatDetails">
-					<div className="userChatTime">12:23</div>
-					<div className="userChatNotif">5</div>
-				</div>
-			</div>
-		</div>
+				);
+			})}
+		</>
 	);
 };
 
