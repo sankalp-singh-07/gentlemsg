@@ -7,6 +7,8 @@ import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../utils/firebase';
+import { useContext } from 'react';
+import { MessageContext } from '../../../context/message.context';
 
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
@@ -18,14 +20,18 @@ const UserChats = () => {
 
 	const dispatch = useDispatch();
 
+	const { setChatId } = useContext(MessageContext);
+
 	useEffect(() => {
 		dispatch(fetchChats(userId));
 	}, [dispatch, userId]);
 
 	const navigate = useNavigate();
 
-	const handleClick = () => {
+	const handleClick = (chatId) => {
 		const currentWidth = window.innerWidth;
+
+		setChatId(chatId);
 
 		if (currentWidth <= 600) {
 			navigate('/chat');
@@ -78,15 +84,21 @@ const UserChats = () => {
 	if (loading) return <h1>Loading...</h1>;
 	if (error) return <h1>{error}</h1>;
 
+	console.log(chats);
+
 	return (
 		<>
-			{chats.map((chat, index) => {
+			{chats.map((chat) => {
 				const user = userData.find(
 					(user) => user.id === chat.receiverId
 				);
 
 				return (
-					<div className="py-2" onClick={handleClick} key={index}>
+					<div
+						className="py-2"
+						onClick={() => handleClick(chat.chatId)}
+						key={chat.chatId}
+					>
 						<div
 							className={`userChat hover:bg-tertiary px-2 py-2 rounded-md ${
 								chat.isSeen ? 'bg-tertiary' : 'bg-sky-200'
