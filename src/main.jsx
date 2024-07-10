@@ -5,13 +5,16 @@ import { Provider } from 'react-redux';
 import { store } from './store/store.js';
 import { FriendProvider } from './context/friend.context.jsx';
 import { DialogProvider } from './context/dialog.context.jsx';
+import { MessageProvider } from './context/message.context.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
 	<React.StrictMode>
 		<Provider store={store}>
 			<DialogProvider>
 				<FriendProvider>
-					<App />
+					<MessageProvider>
+						<App />
+					</MessageProvider>
 				</FriendProvider>
 			</DialogProvider>
 		</Provider>

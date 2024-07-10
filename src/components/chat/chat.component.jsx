@@ -2,9 +2,34 @@ import React, { useState, useEffect, useRef } from 'react';
 import './chat.css';
 import Messages from './childComponents/messages.component';
 import EmojiPicker from 'emoji-picker-react';
+import { MessageContext } from '../../context/message.context';
+import { useContext } from 'react';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../store/user/user.selector';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../utils/firebase';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+	const [receiverData, setReceiverData] = useState([]);
+
+	const { messages, chatId } = useContext(MessageContext);
+	const { currentUser } = useSelector(selectCurrentUser);
+
+	const receiverId = chatId
+		.split('-')
+		.filter((el) => el !== currentUser.id)[0];
+
+	useEffect(() => {
+		if (!receiverId) return;
+
+		const receiverRef = doc(db, 'users', receiverId);
+		const unsubscribe = onSnapshot(receiverRef, (doc) => {
+			setReceiverData(doc.data());
+		});
+		return () => unsubscribe();
+	}, [receiverId]);
+
 	const [text, setText] = useState('');
 	const textBoxRef = useRef(null);
 	const lastMessageShowRef = useRef(null);
@@ -27,16 +52,16 @@ const Chat = ({ inMobile }) => {
 			<div className="top">
 				<div className="userDetails">
 					<img
-						src="src\assets\profile.jpg"
+						src={receiverData.photoURL}
 						alt="profile"
 						className="avatar"
 					/>
 					<div className="currentStatus">
 						<span className="text-black font-semibold text-base">
-							John Doe
+							{receiverData.userName}
 						</span>
 						<p className="sub flex justify-between items-center bg-black py-0.5 px-2 rounded-xl">
-							Active
+							{receiverData.isOnline ? 'Active' : 'Offline'}
 							<span>
 								<img
 									src="src\assets\active.png"
