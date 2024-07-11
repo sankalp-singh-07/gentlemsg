@@ -4,9 +4,11 @@ import {
 	doc,
 	updateDoc,
 	arrayUnion,
-	serverTimestamp,
+	getDoc,
+	arrayRemove,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../../utils/firebase';
+import { decryptMessage } from '../../utils/encryption';
 
 export const sendMessage = async (currentUser, receiverId, content) => {
 	const chatId = generateChatId(currentUser.id, receiverId);
@@ -17,11 +19,12 @@ export const sendMessage = async (currentUser, receiverId, content) => {
 
 	const key = generateKey(currentUser.id, receiverId);
 	const encryptedMessage = encryptMessage(content, key);
+	const decryptedMessage = decryptMessage(encryptedMessage, key);
 
 	const messageData = {
 		message: encryptedMessage,
 		senderId: currentUser.id,
-		sentAt: serverTimestamp(),
+		sentAt: Date.now(),
 		receiverId: receiverId,
 	};
 
@@ -30,17 +33,39 @@ export const sendMessage = async (currentUser, receiverId, content) => {
 	});
 
 	const latestMessage = {
-		lastMessage: content,
+		lastMessage: decryptedMessage,
 		chatId: chatId,
 		isSeen: false,
-		sentAt: serverTimestamp(),
+		senderId: currentUser.id,
+		receiverId: receiverId,
+		sentAt: Date.now(),
 	};
 
-	await updateDoc(userChatRef, {
-		chats: arrayUnion(latestMessage),
-	});
+	const updateDocData = async (userChatsRef) => {
+		const userChatSnap = await getDoc(userChatsRef);
 
-	await updateDoc(receiverChatRef, {
-		chats: arrayUnion(latestMessage),
-	});
+		if (userChatSnap.exists()) {
+			const userChatData = userChatSnap.data().chats;
+
+			const existingChat = userChatData.find(
+				(chat) => chat.chatId === chatId
+			);
+
+			if (existingChat) {
+				await updateDoc(userChatsRef, {
+					chats: arrayRemove(existingChat),
+				});
+			}
+			await updateDoc(userChatsRef, {
+				chats: arrayUnion(latestMessage),
+			});
+		} else {
+			await updateDoc(userChatsRef, {
+				chats: arrayUnion(latestMessage),
+			});
+		}
+	};
+
+	updateDocData(userChatRef);
+	updateDocData(receiverChatRef);
 };

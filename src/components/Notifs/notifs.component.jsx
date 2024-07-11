@@ -3,7 +3,7 @@ import { friendSelector } from '../../store/friends/friends.selector';
 import { useContext, useEffect } from 'react';
 import { DialogContext } from '../../context/dialog.context';
 import { useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { arrayRemove, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import './notifs.styles.css';
 
@@ -47,12 +47,34 @@ const Notifications = () => {
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
-	console.log(notifications);
+	const handleDelete = async (notif) => {
+		const newNotifs = notifications.filter(
+			(n) => n.createdAt !== notif.createdAt
+		);
+		setNotifications(newNotifs);
+
+		const userRef = doc(db, 'users', notif.to);
+
+		const notifToRemove = notifs.find(
+			(notification) =>
+				notification.createdAt === notif.createdAt &&
+				notification.from === notif.from &&
+				notification.to === notif.to
+		);
+
+		try {
+			await updateDoc(userRef, {
+				notifs: arrayRemove(notifToRemove),
+			});
+		} catch (error) {
+			console.error('Error:', error);
+		}
+	};
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
 			<div
-				className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row"
+				className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row "
 				style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}
 			>
 				{notifications.map((notif, index) => (
@@ -74,17 +96,19 @@ const Notifications = () => {
 							<p className="text-sm">
 								{getDate(notif.createdAt)}
 							</p>
-							<button>X</button>
+							<button onClick={() => handleDelete(notif)}>
+								X
+							</button>
 						</div>
 					</div>
 				))}
+				<button
+					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
+					onClick={() => setOpenNotifsDialog(false)}
+				>
+					Close
+				</button>
 			</div>
-			<button
-				className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
-				onClick={() => setOpenNotifsDialog(false)}
-			>
-				Close
-			</button>
 		</div>
 	);
 };

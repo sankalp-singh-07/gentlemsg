@@ -94,6 +94,7 @@ export const acceptRequest = createAsyncThunk(
 				notifs: arrayUnion({
 					type: 'accepted',
 					from: userId,
+					to: senderId,
 					createdAt: Date.now(),
 				}),
 			});
@@ -141,6 +142,7 @@ export const rejectRequest = createAsyncThunk(
 				requests: senderRequestsUpdate,
 				notifs: arrayUnion({
 					type: 'rejected',
+					to: senderId,
 					from: userId,
 					createdAt: Date.now(),
 				}),

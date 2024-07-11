@@ -3,12 +3,9 @@
 }
 
 .userDetails {
-    @apply flex items-center justify-between h-full w-fit px-4
+    @apply flex items-center justify-between h-full w-fit
 }
 
-.avatar {
-    @apply w-12 h-12 rounded-full mr-4
-}
 
 .currentStatus {
     @apply flex items-start justify-between flex-col

@@ -65,16 +65,6 @@ const UserChats = () => {
 		}
 	}, [chats]);
 
-	const fetchData = async (receiverId) => {
-		const receiverRef = doc(db, 'users', receiverId);
-		const receiverSnap = await getDoc(receiverRef);
-
-		if (receiverSnap.exists()) {
-			const receiver = receiverSnap.data();
-			return { id: receiverId, ...receiver };
-		}
-	};
-
 	const getDate = (timeStamp) => {
 		const date = new Date(timeStamp);
 		const options = { day: 'numeric', month: 'short' };
@@ -84,11 +74,9 @@ const UserChats = () => {
 	if (loading) return <h1>Loading...</h1>;
 	if (error) return <h1>{error}</h1>;
 
-	console.log(chats);
-
 	return (
 		<>
-			{chats.map((chat) => {
+			{chats.map((chat, index) => {
 				const user = userData.find(
 					(user) => user.id === chat.receiverId
 				);
