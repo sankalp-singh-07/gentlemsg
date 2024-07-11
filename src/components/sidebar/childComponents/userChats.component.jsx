@@ -9,6 +9,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../utils/firebase';
 import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
+import { decryptMessage, generateKey } from '../../../utils/encryption';
 
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
@@ -63,12 +64,29 @@ const UserChats = () => {
 				fetchUsersData();
 			}
 		}
-	}, [chats]);
+	}, [chats, userId]);
 
 	const getDate = (timeStamp) => {
 		const date = new Date(timeStamp);
 		const options = { day: 'numeric', month: 'short' };
 		return new Intl.DateTimeFormat('en-US', options).format(date);
+	};
+
+	const showLatestMessage = (message, chatId) => {
+		const userIds = chatId.split('-');
+		if (message === 'Start Conversation') {
+			return message;
+		}
+
+		const encryptionKey = generateKey(userIds[0], userIds[1]);
+		const decryptedMessage = decryptMessage(message, encryptionKey);
+		if (!decryptedMessage) {
+			console.error(`Failed to decrypt message: ${message}`);
+			return 'Error decrypting message';
+		}
+		return decryptedMessage.length > 17
+			? `${decryptedMessage.slice(0, 17)}...`
+			: decryptedMessage;
 	};
 
 	if (loading) return <h1>Loading...</h1>;
@@ -108,7 +126,14 @@ const UserChats = () => {
 									{user ? <h1>{user.name}</h1> : <h1>...</h1>}
 								</div>
 								<div className="userMessage">
-									<p>{chat.lastMessage.slice(0, 20)}</p>
+									<p>
+										{user
+											? showLatestMessage(
+													chat.lastMessage,
+													chat.chatId
+											  )
+											: '...'}
+									</p>
 								</div>
 							</div>
 							<div className="userChatDetails">

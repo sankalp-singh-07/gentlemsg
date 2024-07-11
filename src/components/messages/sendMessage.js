@@ -8,7 +8,6 @@ import {
 	arrayRemove,
 } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
-import { decryptMessage } from '../../utils/encryption';
 
 export const sendMessage = async (currentUser, receiverId, content) => {
 	const chatId = generateChatId(currentUser.id, receiverId);
@@ -17,9 +16,10 @@ export const sendMessage = async (currentUser, receiverId, content) => {
 	const userChatRef = doc(db, 'userChats', currentUser.id);
 	const receiverChatRef = doc(db, 'userChats', receiverId);
 
-	const key = generateKey(currentUser.id, receiverId);
+	const [user1, user2] = chatId.split('-');
+
+	const key = generateKey(user1, user2);
 	const encryptedMessage = encryptMessage(content, key);
-	const decryptedMessage = decryptMessage(encryptedMessage, key);
 
 	const messageData = {
 		message: encryptedMessage,
@@ -33,7 +33,7 @@ export const sendMessage = async (currentUser, receiverId, content) => {
 	});
 
 	const latestMessage = {
-		lastMessage: decryptedMessage,
+		lastMessage: encryptedMessage,
 		chatId: chatId,
 		isSeen: false,
 		senderId: currentUser.id,
