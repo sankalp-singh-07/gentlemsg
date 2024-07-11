@@ -1,6 +1,10 @@
-import React from 'react';
+import { useContext } from 'react';
+import { MessageContext } from '../../../context/message.context';
 
 const Messages = () => {
+	const { messages } = useContext(MessageContext);
+	// console.log(messages);
+
 	return (
 		<>
 			<div className="message">
