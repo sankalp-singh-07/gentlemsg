@@ -40,29 +40,30 @@ const UserChats = () => {
 	};
 
 	useEffect(() => {
-		for (let i = 0; i < chats.length; i++) {
-			const receiverId = chats[i].receiverId;
-
-			const fetchData = async (receiverId) => {
-				const receiverRef = doc(db, 'users', receiverId);
-				const receiverSnap = await getDoc(receiverRef);
-
-				if (receiverSnap.exists()) {
-					const receiver = receiverSnap.data();
-					return { id: receiverId, ...receiver };
-				}
-			};
-
-			const fetchUsersData = async () => {
-				const userDataArray = await Promise.all(
-					chats.map((chat) => fetchData(chat.receiverId))
-				);
-				setUserData(userDataArray);
-			};
-
-			if (chats.length) {
-				fetchUsersData();
+		const fetchData = async (userId) => {
+			const userRef = doc(db, 'users', userId);
+			const userSnap = await getDoc(userRef);
+			if (userSnap.exists()) {
+				return { id: userId, ...userSnap.data() };
 			}
+			return null;
+		};
+
+		const fetchUsersData = async () => {
+			const userDataArray = await Promise.all(
+				chats.map(async (chat) => {
+					const otherUserId =
+						chat.receiverId === userId
+							? chat?.senderId
+							: chat.receiverId;
+					return await fetchData(otherUserId);
+				})
+			);
+			setUserData(userDataArray.filter((user) => user !== null));
+		};
+
+		if (chats.length) {
+			fetchUsersData();
 		}
 	}, [chats, userId]);
 
@@ -92,12 +93,17 @@ const UserChats = () => {
 	if (loading) return <h1>Loading...</h1>;
 	if (error) return <h1>{error}</h1>;
 
+	console.log('userdata', userData);
+	console.log('chats', chats);
+
 	return (
 		<>
 			{chats.map((chat, index) => {
-				const user = userData.find(
-					(user) => user.id === chat.receiverId
-				);
+				const otherUserId =
+					chat.receiverId === userId
+						? chat?.senderId
+						: chat.receiverId;
+				const user = userData.find((user) => user.id === otherUserId);
 
 				return (
 					<div
