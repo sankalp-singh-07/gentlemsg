@@ -1,9 +1,15 @@
 import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../store/user/user.selector';
 
 const Messages = () => {
-	const { messages } = useContext(MessageContext);
+	const { messages, chatId } = useContext(MessageContext);
 	// console.log(messages);
+	const { currentUser } = useSelector(selectCurrentUser);
+	const receiverId = chatId
+		.split('-')
+		.filter((el) => el !== currentUser.id)[0];
 
 	return (
 		<>
