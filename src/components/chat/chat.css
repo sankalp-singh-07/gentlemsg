@@ -42,7 +42,7 @@
 
 
 .middle {
-    @apply flex flex-1 justify-normal w-full pr-8 pl-4 flex-col h-4/5 overflow-scroll gap-7 py-2
+    @apply flex flex-1 justify-normal w-full pr-8 pl-4 flex-col h-4/5 overflow-scroll gap-7 py-2 scroll-smooth
 }
 
 .message {

@@ -90,15 +90,16 @@ const UserChats = () => {
 			: decryptedMessage;
 	};
 
+	const sortedChats = [...chats].sort((a, b) => {
+		return new Date(b.sentAt) - new Date(a.sentAt);
+	});
+
 	if (loading) return <h1>Loading...</h1>;
 	if (error) return <h1>{error}</h1>;
 
-	console.log('userdata', userData);
-	console.log('chats', chats);
-
 	return (
 		<>
-			{chats.map((chat, index) => {
+			{sortedChats.map((chat, index) => {
 				const otherUserId =
 					chat.receiverId === userId
 						? chat?.senderId
