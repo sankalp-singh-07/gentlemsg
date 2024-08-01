@@ -101,11 +101,20 @@ const Chat = ({ inMobile }) => {
 							<div className="w-1 h-full bg-[#B8D9FF] mx-3"></div>
 						</>
 					)}
-					<img
-						src={receiverData.photoURL}
-						alt="profile"
-						className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
-					/>
+					{receiverData.photoURL ? (
+						<img
+							src={receiverData.photoURL}
+							alt="profile"
+							className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
+						/>
+					) : (
+						<img
+							src="src\assets\profile.png"
+							alt="profile"
+							className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
+						/>
+					)}
+
 					<div className="currentStatus">
 						<span className="text-black font-semibold text-sm sm:text-base">
 							{receiverData.userName}
@@ -128,11 +137,6 @@ const Chat = ({ inMobile }) => {
 						className="w-6 h-6 mr-4 sm:w-8 sm:h-8 sm:mr-6"
 					/>
 					<img
-						src="src\assets\search.png"
-						alt="video"
-						className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-6"
-					/>
-					<img
 						src="src\assets\dots.png"
 						alt="video"
 						className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4"
@@ -140,8 +144,8 @@ const Chat = ({ inMobile }) => {
 				</div>
 			</div>
 			<div className="middle scrollbar-hide">
-				<Messages />
-				<div ref={lastMessageShowRef}></div>
+				<Messages receiverImg={receiverData.photoURL} />
+				<div ref={lastMessageShowRef} />
 			</div>
 			<div className="bottom mt-2">
 				<div className="inputContainer">
@@ -176,6 +180,9 @@ const Chat = ({ inMobile }) => {
 							src="src\assets\folder.png"
 							alt="mic"
 							className="w-6 h-6 mr-2 cursor-pointer"
+							onClick={() => {
+								console.log('Image send');
+							}}
 						/>
 					</div>
 					<button
