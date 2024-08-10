@@ -5,24 +5,24 @@ export const DialogContext = createContext({
 	setOpenFriendsDialog: () => {},
 	openNotifsDialog: false,
 	setOpenNotifsDialog: () => {},
-	openChatsDialog: false,
-	setOpenChatsDialog: () => {},
+	openMediaDialog: false,
+	setOpenMediaDialog: () => {},
 });
 
 export const DialogProvider = ({ children }) => {
 	const [openFriendsDialog, setOpenFriendsDialog] = useState(false);
 	const [openNotifsDialog, setOpenNotifsDialog] = useState(false);
-	const [openChatsDialog, setOpenChatsDialog] = useState(false);
+	const [openMediaDialog, setOpenMediaDialog] = useState(false);
 
 	return (
 		<DialogContext.Provider
 			value={{
 				openNotifsDialog,
 				openFriendsDialog,
-				openChatsDialog,
+				openMediaDialog,
 				setOpenFriendsDialog,
 				setOpenNotifsDialog,
-				setOpenChatsDialog,
+				setOpenMediaDialog,
 			}}
 		>
 			{children}
