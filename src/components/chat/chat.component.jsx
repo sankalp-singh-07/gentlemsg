@@ -10,6 +10,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { sendMessage } from '../messages/sendMessage';
 import { useNavigate } from 'react-router-dom';
+import ChatsDialog from './childComponents/chatsDialog.component';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -86,7 +87,9 @@ const Chat = ({ inMobile }) => {
 
 	return (
 		<div
-			className={`chat ${inMobile === 'hidden' && 'max-[650px]:hidden'}`}
+			className={`chat ${
+				inMobile === 'hidden' && 'max-[650px]:hidden'
+			} relative`}
 		>
 			<div className="flex items-center justify-between h-16 w-full border-b-4 px-2 sm:px-4 border-[#B8D9FF]">
 				<div className="userDetails">
@@ -136,11 +139,8 @@ const Chat = ({ inMobile }) => {
 						alt="video"
 						className="w-6 h-6 mr-4 sm:w-8 sm:h-8 sm:mr-6"
 					/>
-					<img
-						src="src\assets\dots.png"
-						alt="video"
-						className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4"
-					/>
+
+					<ChatsDialog />
 				</div>
 			</div>
 			<div className="middle scrollbar-hide">
