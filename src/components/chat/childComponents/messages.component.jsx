@@ -12,7 +12,7 @@ const Messages = ({ receiverImg }) => {
 	const { receiverInfo, setReceiverInfo } = useState([]);
 	const receiverId = chatId
 		.split('-')
-		.filter((el) => el !== currentUser.id)[0];
+		.filter((el) => el !== currentUser?.id)[0];
 
 	// Scroll
 	const messagesEndRef = useRef(null);
