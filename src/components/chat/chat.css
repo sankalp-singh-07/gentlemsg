@@ -45,8 +45,12 @@
     @apply flex flex-1 justify-normal w-full pr-8 pl-4 flex-col h-4/5 overflow-scroll gap-7 py-2 scroll-smooth
 }
 
-.message {
+/* .message {
     @apply flex h-fit w-10/12 sm:w-9/12 md:w-8/12 lg:w-5/12;
+} */
+
+.message {
+    @apply flex h-fit max-w-fit  sm:w-9/12 md:w-8/12 lg:w-5/12;
 }
 
 .texts {

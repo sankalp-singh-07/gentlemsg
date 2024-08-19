@@ -72,22 +72,29 @@ const Messages = ({ receiverImg }) => {
 								</span>
 							) : (
 								decryptedContent.map((item, i) => (
-									<div key={i}>
+									<div key={i} className="justify-items-end">
 										{item[1] === 'image' ? (
 											<img
 												src={item[0]}
 												alt="media"
-												className="w-10/12 h-80 m-auto"
+												className="w-6/12 h-50 m-auto hover:cursor-pointer"
+												onClick={() =>
+													window.open(item[0])
+												}
 											/>
 										) : item[1] === 'document' ? (
-											<a
-												href={item[0]}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="text-blue-600 underline"
-											>
-												View PDF
-											</a>
+											<div className="w-fit h-fit bg-primary rounded-md">
+												<a
+													href={item[0]}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-blue-600 underline"
+												>
+													<p className="text-tertiary px-2 py-3">
+														View Document
+													</p>
+												</a>
+											</div>
 										) : (
 											<video
 												controls
