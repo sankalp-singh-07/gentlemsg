@@ -28,22 +28,32 @@ const Messages = ({ receiverImg }) => {
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
-	const showDecryptedMessage = (message, chatId) => {
+	const showDecryptedMessage = (message, chatId, type) => {
 		const userIds = chatId.split('-');
-
 		const encryptionKey = generateKey(userIds[0], userIds[1]);
-		const decryptedMessage = decryptMessage(message, encryptionKey);
-		if (!decryptedMessage) {
-			console.error(`Failed to decrypt message: ${message}`);
-			return 'Failed to get message';
+
+		if (type === 'text') {
+			const decryptedMessage = decryptMessage(message, encryptionKey);
+			return decryptedMessage || 'Failed to get message';
+		} else if (
+			type === 'image' ||
+			type === 'document' ||
+			type === 'video'
+		) {
+			return message.map((url) => [url, type]);
 		}
-		return decryptedMessage;
 	};
 
 	return (
 		<>
 			{messagesArr.map((message, index) => {
 				const isOwn = message.senderId === currentUser.id;
+				const decryptedContent = showDecryptedMessage(
+					message.message,
+					chatId,
+					message.type
+				);
+
 				return (
 					<div
 						key={index}
@@ -56,9 +66,39 @@ const Messages = ({ receiverImg }) => {
 							/>
 						)}
 						<div className="texts">
-							<span className="textContent text-left">
-								{showDecryptedMessage(message.message, chatId)}
-							</span>
+							{message.type === 'text' ? (
+								<span className="textContent text-left">
+									{decryptedContent}
+								</span>
+							) : (
+								decryptedContent.map((item, i) => (
+									<div key={i}>
+										{item[1] === 'image' ? (
+											<img
+												src={item[0]}
+												alt="media"
+												className="w-10/12 h-80 m-auto"
+											/>
+										) : item[1] === 'document' ? (
+											<a
+												href={item[0]}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-blue-600 underline"
+											>
+												View PDF
+											</a>
+										) : (
+											<video
+												controls
+												className="w-10/12 h-80 m-auto"
+											>
+												<source src={item[0]} />
+											</video>
+										)}
+									</div>
+								))
+							)}
 							<span className="flex self-end text-sm font-normal">
 								{getDate(message.sentAt)}
 							</span>

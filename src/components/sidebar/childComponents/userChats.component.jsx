@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectChats } from '../../../store/chats/chats.selector';
-import { useDispatch } from 'react-redux';
 import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { doc, getDoc } from 'firebase/firestore';
@@ -73,21 +72,34 @@ const UserChats = () => {
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
-	const showLatestMessage = (message, chatId) => {
+	const showLatestMessage = (message, chatId, type) => {
 		const userIds = chatId.split('-');
-		if (message === 'Start Conversation') {
-			return message;
-		}
+		let displayMessage = '';
 
 		const encryptionKey = generateKey(userIds[0], userIds[1]);
-		const decryptedMessage = decryptMessage(message, encryptionKey);
-		if (!decryptedMessage) {
-			console.error(`Failed to decrypt message: ${message}`);
-			return 'Error decrypting message';
+
+		if (type === 'text') {
+			const decryptedMessage = decryptMessage(message, encryptionKey);
+			if (!decryptedMessage) {
+				console.error(`Failed to decrypt message: ${message}`);
+				displayMessage = 'Error decrypting message';
+			} else {
+				displayMessage =
+					decryptedMessage.length > 17
+						? `${decryptedMessage.slice(0, 17)}...`
+						: decryptedMessage;
+			}
+		} else if (type === 'image') {
+			displayMessage = '[Image]';
+		} else if (type === 'document') {
+			displayMessage = '[Document]';
+		} else if (type === 'video') {
+			displayMessage = '[Video]';
+		} else {
+			displayMessage = 'Start Conversation';
 		}
-		return decryptedMessage.length > 17
-			? `${decryptedMessage.slice(0, 17)}...`
-			: decryptedMessage;
+
+		return displayMessage;
 	};
 
 	const sortedChats = [...chats].sort((a, b) => {
@@ -99,7 +111,7 @@ const UserChats = () => {
 
 	return (
 		<>
-			{sortedChats.map((chat, index) => {
+			{sortedChats.map((chat) => {
 				const otherUserId =
 					chat.receiverId === userId
 						? chat?.senderId
@@ -137,7 +149,8 @@ const UserChats = () => {
 										{user
 											? showLatestMessage(
 													chat.lastMessage,
-													chat.chatId
+													chat.chatId,
+													chat.type
 											  )
 											: '...'}
 									</p>
