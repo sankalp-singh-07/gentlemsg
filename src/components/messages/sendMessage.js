@@ -9,7 +9,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 
-export const sendMessage = async (currentUser, receiverId, content) => {
+export const sendMessage = async (currentUser, receiverId, content, type) => {
+	console.log(type);
 	const chatId = generateChatId(currentUser.id, receiverId);
 	const chatRef = doc(db, 'chats', chatId);
 
@@ -19,27 +20,57 @@ export const sendMessage = async (currentUser, receiverId, content) => {
 	const [user1, user2] = chatId.split('-');
 
 	const key = generateKey(user1, user2);
-	const encryptedMessage = encryptMessage(content, key);
+	let encryptedContent;
+
+	if (type === 'text') {
+		encryptedContent = encryptMessage(content, key);
+	} else if (type === 'image' || type === 'document' || type === 'video') {
+		if (Array.isArray(content)) {
+			encryptedContent = content.map((url) => url);
+		} else {
+			encryptedContent = content;
+		}
+	} else {
+		error('Invalid type');
+	}
+
+	if (
+		!encryptedContent ||
+		(Array.isArray(encryptedContent) &&
+			encryptedContent.includes(undefined))
+	) {
+		throw new Error('Encryption failed, resulting in undefined content');
+	}
 
 	const messageData = {
-		message: encryptedMessage,
+		message: encryptedContent,
 		senderId: currentUser.id,
 		sentAt: Date.now(),
 		receiverId: receiverId,
+		type: type,
 	};
+
+	if (Object.values(messageData).some((value) => value === undefined)) {
+		throw new Error('Message data contains undefined values');
+	}
 
 	await updateDoc(chatRef, {
 		messages: arrayUnion(messageData),
 	});
 
 	const latestMessage = {
-		lastMessage: encryptedMessage,
+		lastMessage: type === 'text' ? encryptedContent : '[File]',
 		chatId: chatId,
 		isSeen: false,
+		type: type,
 		senderId: currentUser.id,
 		receiverId: receiverId,
 		sentAt: Date.now(),
 	};
+
+	if (Object.values(latestMessage).some((value) => value === undefined)) {
+		throw new Error('Latest message contains undefined values');
+	}
 
 	const updateDocData = async (userChatsRef) => {
 		const userChatSnap = await getDoc(userChatsRef);

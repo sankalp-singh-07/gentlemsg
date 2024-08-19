@@ -11,6 +11,7 @@ import { db } from '../../utils/firebase';
 import { sendMessage } from '../messages/sendMessage';
 import { useNavigate } from 'react-router-dom';
 import ChatsDialog from './childComponents/chatsDialog.component';
+import SendMedia from '../messages/sendMedia';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -18,6 +19,10 @@ const Chat = ({ inMobile }) => {
 
 	const { chatId, setMessages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
+
+	const fileInputRef = useRef(null);
+
+	const [files, setFiles] = useState([]);
 
 	const navigate = useNavigate();
 
@@ -70,7 +75,7 @@ const Chat = ({ inMobile }) => {
 	const handleSend = async () => {
 		if (text.trim() === '') return;
 
-		await sendMessage(currentUser, receiverData.id, text);
+		await sendMessage(currentUser, receiverData.id, text, 'text');
 
 		setText('');
 	};
@@ -83,6 +88,15 @@ const Chat = ({ inMobile }) => {
 
 	const handleBack = () => {
 		navigate('/admin');
+	};
+
+	const handeleUpload = () => {
+		fileInputRef.current.click();
+	};
+
+	const handleFileUpload = (e) => {
+		const filesArr = Array.from(e.target.files);
+		if (filesArr.length > 0) setFiles(filesArr);
 	};
 
 	return (
@@ -176,14 +190,23 @@ const Chat = ({ inMobile }) => {
 							value={text}
 							ref={textBoxRef}
 						/>
-						<img
-							src="src\assets\folder.png"
-							alt="mic"
-							className="w-6 h-6 mr-2 cursor-pointer"
-							onClick={() => {
-								console.log('Image send');
-							}}
-						/>
+						<div>
+							<img
+								src="src\assets\folder.png"
+								alt="mic"
+								className="w-6 h-6 mr-2 cursor-pointer"
+								onClick={handeleUpload}
+							/>
+							<input
+								type="file"
+								multiple
+								className="hidden"
+								onChange={(e) => {
+									handleFileUpload(e);
+								}}
+								ref={fileInputRef}
+							/>
+						</div>
 					</div>
 					<button
 						className="bg-quatery rounded-xl p-4 drop-shadow"
@@ -197,6 +220,11 @@ const Chat = ({ inMobile }) => {
 					</button>
 				</div>
 			</div>
+			<SendMedia
+				files={files}
+				currentUser={currentUser}
+				receiverData={receiverData}
+			/>
 		</div>
 	);
 };
