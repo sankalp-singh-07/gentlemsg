@@ -18,28 +18,15 @@ export const sendMessage = async (currentUser, receiverId, content, type) => {
 	const receiverChatRef = doc(db, 'userChats', receiverId);
 
 	const [user1, user2] = chatId.split('-');
-
 	const key = generateKey(user1, user2);
 	let encryptedContent;
 
 	if (type === 'text') {
 		encryptedContent = encryptMessage(content, key);
 	} else if (type === 'image' || type === 'document' || type === 'video') {
-		if (Array.isArray(content)) {
-			encryptedContent = content.map((url) => url);
-		} else {
-			encryptedContent = content;
-		}
+		encryptedContent = Array.isArray(content) ? content : [content];
 	} else {
-		error('Invalid type');
-	}
-
-	if (
-		!encryptedContent ||
-		(Array.isArray(encryptedContent) &&
-			encryptedContent.includes(undefined))
-	) {
-		throw new Error('Encryption failed, resulting in undefined content');
+		throw new Error('Invalid type');
 	}
 
 	const messageData = {
@@ -49,10 +36,6 @@ export const sendMessage = async (currentUser, receiverId, content, type) => {
 		receiverId: receiverId,
 		type: type,
 	};
-
-	if (Object.values(messageData).some((value) => value === undefined)) {
-		throw new Error('Message data contains undefined values');
-	}
 
 	await updateDoc(chatRef, {
 		messages: arrayUnion(messageData),
@@ -68,35 +51,30 @@ export const sendMessage = async (currentUser, receiverId, content, type) => {
 		sentAt: Date.now(),
 	};
 
-	if (Object.values(latestMessage).some((value) => value === undefined)) {
-		throw new Error('Latest message contains undefined values');
-	}
-
 	const updateDocData = async (userChatsRef) => {
 		const userChatSnap = await getDoc(userChatsRef);
 
 		if (userChatSnap.exists()) {
-			const userChatData = userChatSnap.data().chats;
+			const userChatData = userChatSnap.data().chats || [];
 
-			const existingChat = userChatData.find(
-				(chat) => chat.chatId === chatId
+			const updatedChats = userChatData.filter(
+				(chat) => chat.chatId !== chatId
 			);
 
-			if (existingChat) {
-				await updateDoc(userChatsRef, {
-					chats: arrayRemove(existingChat),
-				});
-			}
+			updatedChats.push(latestMessage);
+
 			await updateDoc(userChatsRef, {
-				chats: arrayUnion(latestMessage),
+				chats: updatedChats,
 			});
 		} else {
 			await updateDoc(userChatsRef, {
-				chats: arrayUnion(latestMessage),
+				chats: [latestMessage],
 			});
 		}
 	};
 
-	updateDocData(userChatRef);
-	updateDocData(receiverChatRef);
+	await Promise.all([
+		updateDocData(userChatRef),
+		updateDocData(receiverChatRef),
+	]);
 };
