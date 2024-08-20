@@ -18,6 +18,8 @@ const SearchFriends = () => {
 		const formData = new FormData(e.target);
 		const username = formData.get('username');
 
+		console.log(currentUser);
+
 		const usersRef = collection(db, 'users');
 		const q = query(usersRef, where('userName', '==', username));
 
@@ -45,7 +47,7 @@ const SearchFriends = () => {
 
 	return (
 		<>
-			<div className=" bg-secondary rounded-md absolute top-0 bottom-0 left-0 right-0 m-auto p-5 max-sm:w-4/5 w-max h-max ">
+			<div className=" bg-secondary rounded-md absolute top-0 bottom-0 left-0 right-0 m-auto p-5 max-sm:w-4/5 w-max h-max z-20">
 				<form className="flex gap-4" onSubmit={handleSubmit}>
 					<input
 						type="text"
