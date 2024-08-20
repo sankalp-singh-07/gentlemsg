@@ -18,7 +18,7 @@ const SearchFriends = () => {
 		const formData = new FormData(e.target);
 		const username = formData.get('username');
 
-		console.log(currentUser);
+		if (username === '' || username === currentUser.userName) return;
 
 		const usersRef = collection(db, 'users');
 		const q = query(usersRef, where('userName', '==', username));
