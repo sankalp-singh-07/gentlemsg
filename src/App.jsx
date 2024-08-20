@@ -30,6 +30,7 @@ function App() {
 							name: userData.displayName || user.displayName,
 							email: userData.email || user.email,
 							photoURL: userData.photoURL || user.photoURL,
+							userName: userData.userName || user.userName,
 						})
 					);
 				} else {
