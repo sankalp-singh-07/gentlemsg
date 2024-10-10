@@ -1,8 +1,13 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
+import BlockUser from '../../friends/blockUser.component';
+import { MessageContext } from '../../../context/message.context';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
+	const { chatId } = useContext(MessageContext);
+
+	const [blockId, setBlockId] = useState(null);
 
 	const menuRef = useRef(null);
 
@@ -20,6 +25,10 @@ const ChatsDialog = () => {
 		};
 	});
 
+	const handleBlockUserId = (chatId) => {
+		setBlockId(chatId);
+	};
+
 	return (
 		<>
 			{openChatsDialog && (
@@ -31,7 +40,10 @@ const ChatsDialog = () => {
 						>
 							Media
 						</li>
-						<li className="hover:bg-red-600 hover:text-tertiary pr-12 pl-4 py-3 rounded-md cursor-pointer">
+						<li
+							className="hover:bg-red-600 hover:text-tertiary pr-12 pl-4 py-3 rounded-md cursor-pointer"
+							onClick={() => handleBlockUserId(chatId)}
+						>
 							Block
 						</li>
 					</ul>
@@ -45,6 +57,7 @@ const ChatsDialog = () => {
 				onClick={() => setOpenChatsDialog(!openChatsDialog)}
 				ref={menuRef}
 			/>
+			{blockId && <BlockUser chatId={blockId} />}
 		</>
 	);
 };
