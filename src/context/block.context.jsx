@@ -1,15 +1,25 @@
 import { createContext, useState } from 'react';
 
 export const BlockContext = createContext({
-	blockUsers: [],
-	setBlockUsers: () => {},
+	blockByUser: [],
+	setBlockByUser: () => {},
+	blockedTheUser: [],
+	setBlockedTheUser: () => {},
 });
 
 export const BlockProvider = ({ children }) => {
-	const [blockUsers, setBlockUsers] = useState([]);
+	const [blockByUser, setBlockByUser] = useState([]);
+	const [blockedTheUser, setBlockedTheUser] = useState([]);
 
 	return (
-		<BlockContext.Provider value={{ blockUsers, setBlockUsers }}>
+		<BlockContext.Provider
+			value={{
+				blockByUser,
+				setBlockByUser,
+				blockedTheUser,
+				setBlockedTheUser,
+			}}
+		>
 			{children}
 		</BlockContext.Provider>
 	);
