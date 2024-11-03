@@ -4,12 +4,15 @@ import BlockUser from '../../friends/blockUser.component';
 import { MessageContext } from '../../../context/message.context';
 import { useSelector } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
+import { selectCurrentUser } from '../../../store/user/user.selector';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
 	const { chatId } = useContext(MessageContext);
+	const { currentUser } = useSelector(selectCurrentUser);
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
+	const [isUserBlockOther, setIsUserBlockOther] = useState(false);
 
 	const { blocked } = useSelector(friendSelector);
 
@@ -17,10 +20,14 @@ const ChatsDialog = () => {
 		for (let id in blocked) {
 			if (id === chatId) {
 				setIsUserBlocked(true);
+				if (blocked[id].blockedBy === currentUser.id)
+					setIsUserBlockOther(true);
 				break;
 			}
 		}
 	}, [blocked, chatId]);
+
+	console.log(isUserBlockOther);
 
 	// console.log(isUserBlocked);
 
@@ -57,12 +64,17 @@ const ChatsDialog = () => {
 						>
 							Media
 						</li>
-						<li
-							className="hover:bg-red-600 hover:text-tertiary pr-12 pl-4 py-3 rounded-md cursor-pointer"
-							onClick={() => handleBlockUserId(chatId)}
-						>
-							{isUserBlocked ? 'Unblock' : 'Block'}
-						</li>
+						{(isUserBlocked && isUserBlockOther) ||
+						!isUserBlocked ? (
+							<li
+								className="hover:bg-red-600 hover:text-tertiary pr-12 pl-4 py-3 rounded-md cursor-pointer"
+								onClick={() => handleBlockUserId(chatId)}
+							>
+								{isUserBlocked && isUserBlockOther
+									? 'Unblock'
+									: 'Block'}
+							</li>
+						) : null}
 					</ul>
 				</div>
 			)}
