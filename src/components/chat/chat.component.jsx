@@ -12,6 +12,7 @@ import { sendMessage } from '../messages/sendMessage';
 import { useNavigate } from 'react-router-dom';
 import ChatsDialog from './childComponents/chatsDialog.component';
 import SendMedia from '../messages/sendMedia';
+import { friendSelector } from '../../store/friends/friends.selector';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -19,6 +20,23 @@ const Chat = ({ inMobile }) => {
 
 	const { chatId, setMessages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
+
+	const { blocked } = useSelector(friendSelector);
+
+	const [isUserBlocked, setIsUserBlocked] = useState(false);
+	const [blockText, setBlockText] = useState('');
+
+	useEffect(() => {
+		for (let id in blocked) {
+			if (id === chatId) {
+				setIsUserBlocked(true);
+				if (blocked[id].blockedBy === currentUser.id) {
+					setBlockText('You have blocked this user');
+				} else setBlockText('You are blocked by this user');
+				break;
+			}
+		}
+	}, [blocked, chatId]);
 
 	const fileInputRef = useRef(null);
 
@@ -183,11 +201,14 @@ const Chat = ({ inMobile }) => {
 						</div>
 						<input
 							type="text"
-							placeholder="Type a message"
+							placeholder={
+								isUserBlocked ? blockText : 'Type a message'
+							}
 							className="w-full h-full outline-none px-4 md:m-3 bg-quatery"
 							onChange={(e) => setText(e.target.value)}
 							onKeyDown={(e) => handleEnterSend(e)}
 							value={text}
+							disabled={isUserBlocked}
 							ref={textBoxRef}
 						/>
 						<div>
@@ -211,6 +232,7 @@ const Chat = ({ inMobile }) => {
 					<button
 						className="bg-quatery rounded-xl p-4 drop-shadow"
 						onClick={handleSend}
+						disabled={isUserBlocked}
 					>
 						<img
 							src="src\assets\send.png"

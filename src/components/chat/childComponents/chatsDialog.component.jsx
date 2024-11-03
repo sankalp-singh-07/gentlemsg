@@ -2,10 +2,27 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
 import BlockUser from '../../friends/blockUser.component';
 import { MessageContext } from '../../../context/message.context';
+import { useSelector } from 'react-redux';
+import { friendSelector } from '../../../store/friends/friends.selector';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
 	const { chatId } = useContext(MessageContext);
+
+	const [isUserBlocked, setIsUserBlocked] = useState(false);
+
+	const { blocked } = useSelector(friendSelector);
+
+	useEffect(() => {
+		for (let id in blocked) {
+			if (id === chatId) {
+				setIsUserBlocked(true);
+				break;
+			}
+		}
+	}, [blocked, chatId]);
+
+	// console.log(isUserBlocked);
 
 	const [blockId, setBlockId] = useState(null);
 
@@ -44,7 +61,7 @@ const ChatsDialog = () => {
 							className="hover:bg-red-600 hover:text-tertiary pr-12 pl-4 py-3 rounded-md cursor-pointer"
 							onClick={() => handleBlockUserId(chatId)}
 						>
-							Block
+							{isUserBlocked ? 'Unblock' : 'Block'}
 						</li>
 					</ul>
 				</div>

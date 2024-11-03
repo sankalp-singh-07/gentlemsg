@@ -39,7 +39,7 @@ const SignInHandler = async () => {
 					lastActive: serverTimestamp(),
 					isOnline: true,
 					friends: [],
-					blocked: [],
+					blocked: {},
 					requests: [],
 					notifs: [],
 					userName: userNameCreate(user.displayName),

@@ -9,7 +9,7 @@ import {
 const INITIAL_STATE = {
 	friends: [],
 	requests: [],
-	blocked: [],
+	blocked: {},
 	notifs: [],
 	status: 'idle',
 	error: null,
