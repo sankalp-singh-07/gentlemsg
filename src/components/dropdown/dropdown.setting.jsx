@@ -10,7 +10,7 @@ const DropDownSetting = () => {
 	const imgRef = useRef();
 	const menuRef = useRef();
 
-	const { setOpenFriendsDialog, setOpenNotifsDialog } =
+	const { setOpenFriendsDialog, setOpenNotifsDialog, setOpenProfileDialog } =
 		useContext(DialogContext);
 
 	const handleIconClick = () => {
@@ -27,6 +27,12 @@ const DropDownSetting = () => {
 		e.stopPropagation();
 		setShowDropDownSettings(false);
 		setOpenFriendsDialog(true);
+	};
+
+	const handleProfileDialog = (e) => {
+		e.stopPropagation();
+		setShowDropDownSettings(false);
+		setOpenProfileDialog(true);
 	};
 
 	const handleNotifsDialog = (e) => {
@@ -60,7 +66,7 @@ const DropDownSetting = () => {
 					<ul className="flex flex-col gap-3">
 						<li
 							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
-							onClick={() => setShowDropDownSettings(false)}
+							onClick={(e) => handleProfileDialog(e)}
 						>
 							Profile
 						</li>

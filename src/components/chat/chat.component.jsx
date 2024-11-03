@@ -20,29 +20,35 @@ const Chat = ({ inMobile }) => {
 
 	const { chatId, setMessages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
-
 	const { blocked } = useSelector(friendSelector);
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [blockText, setBlockText] = useState('');
 
+	const fileInputRef = useRef(null);
+	const [files, setFiles] = useState([]);
+	const navigate = useNavigate();
+
 	useEffect(() => {
+		if (!blocked || !chatId || !currentUser) return;
+
+		let blockedStatus = false;
+		let textMessage = '';
 		for (let id in blocked) {
 			if (id === chatId) {
-				setIsUserBlocked(true);
-				if (blocked[id].blockedBy === currentUser.id) {
-					setBlockText('You have blocked this user');
-				} else setBlockText('You are blocked by this user');
+				blockedStatus = true;
+				textMessage =
+					blocked[id].blockedBy === currentUser.id
+						? 'You have blocked this user'
+						: 'You are blocked by this user';
 				break;
 			}
 		}
-	}, [blocked, chatId]);
+		setIsUserBlocked(blockedStatus);
+		setBlockText(textMessage);
 
-	const fileInputRef = useRef(null);
-
-	const [files, setFiles] = useState([]);
-
-	const navigate = useNavigate();
+		if (blockedStatus) setText('');
+	}, [blocked, chatId, currentUser]);
 
 	useEffect(() => {
 		if (!currentUser) {
@@ -53,7 +59,6 @@ const Chat = ({ inMobile }) => {
 		const receiverId = chatId
 			.split('-')
 			.filter((el) => el !== currentUser.id)[0];
-
 		if (!receiverId) return;
 
 		const receiverRef = doc(db, 'users', receiverId);
@@ -80,42 +85,30 @@ const Chat = ({ inMobile }) => {
 	const lastMessageShowRef = useRef(null);
 
 	useEffect(() => {
-		textBoxRef.current.focus();
+		if (!isUserBlocked) textBoxRef.current?.focus();
 		lastMessageShowRef.current?.scrollIntoView({ behavior: 'smooth' });
-	}, []);
+	}, [isUserBlocked]);
 
 	const handleEmoji = (e) => {
-		setText(text + e.emoji);
+		setText((prevText) => prevText + e.emoji);
 		setEmojiPickerOpen(false);
 		textBoxRef.current.focus();
 	};
 
 	const handleSend = async () => {
-		if (text.trim() === '') return;
+		if (text.trim() === '' || isUserBlocked) return;
 
 		await sendMessage(currentUser, receiverData.id, text, 'text');
-
 		setText('');
 	};
 
 	const handleEnterSend = (e) => {
-		if (e.key === 'Enter') {
-			handleSend();
-		}
+		if (e.key === 'Enter') handleSend();
 	};
 
-	const handleBack = () => {
-		navigate('/admin');
-	};
-
-	const handeleUpload = () => {
-		fileInputRef.current.click();
-	};
-
-	const handleFileUpload = (e) => {
-		const filesArr = Array.from(e.target.files);
-		if (filesArr.length > 0) setFiles(filesArr);
-	};
+	const handleBack = () => navigate('/admin');
+	const handeleUpload = () => fileInputRef.current.click();
+	const handleFileUpload = (e) => setFiles(Array.from(e.target.files));
 
 	return (
 		<div
@@ -144,7 +137,7 @@ const Chat = ({ inMobile }) => {
 						/>
 					) : (
 						<img
-							src="src\assets\profile.png"
+							src="src/assets/profile.png"
 							alt="profile"
 							className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
 						/>
@@ -158,7 +151,7 @@ const Chat = ({ inMobile }) => {
 							{receiverData.isOnline ? 'Active' : 'Offline'}
 							<span>
 								<img
-									src="src\assets\active.png"
+									src="src/assets/active.png"
 									className="w-2 h-2 ml-3"
 								/>
 							</span>
@@ -167,11 +160,10 @@ const Chat = ({ inMobile }) => {
 				</div>
 				<div className="icons">
 					<img
-						src="src\assets\video.png"
+						src="src/assets/video.png"
 						alt="video"
 						className="w-6 h-6 mr-4 sm:w-8 sm:h-8 sm:mr-6"
 					/>
-
 					<ChatsDialog />
 				</div>
 			</div>
@@ -184,7 +176,7 @@ const Chat = ({ inMobile }) => {
 					<div className="inputEl">
 						<div className="relative">
 							<img
-								src="src\assets\happy.png"
+								src="src/assets/happy.png"
 								alt="emoji"
 								className="w-6 h-6 ml-2 cursor-pointer"
 								onClick={() =>
@@ -206,14 +198,14 @@ const Chat = ({ inMobile }) => {
 							}
 							className="w-full h-full outline-none px-4 md:m-3 bg-quatery"
 							onChange={(e) => setText(e.target.value)}
-							onKeyDown={(e) => handleEnterSend(e)}
+							onKeyDown={handleEnterSend}
 							value={text}
 							disabled={isUserBlocked}
 							ref={textBoxRef}
 						/>
 						<div>
 							<img
-								src="src\assets\folder.png"
+								src="src/assets/folder.png"
 								alt="mic"
 								className="w-6 h-6 mr-2 cursor-pointer"
 								onClick={handeleUpload}
@@ -222,9 +214,7 @@ const Chat = ({ inMobile }) => {
 								type="file"
 								multiple
 								className="hidden"
-								onChange={(e) => {
-									handleFileUpload(e);
-								}}
+								onChange={handleFileUpload}
 								ref={fileInputRef}
 							/>
 						</div>
@@ -235,7 +225,7 @@ const Chat = ({ inMobile }) => {
 						disabled={isUserBlocked}
 					>
 						<img
-							src="src\assets\send.png"
+							src="src/assets/send.png"
 							alt="send"
 							className="w-8 h-8 cursor-pointer"
 						/>
