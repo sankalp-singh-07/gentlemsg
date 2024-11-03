@@ -3,6 +3,7 @@ import { selectCurrentUser } from '../../store/user/user.selector';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import { useEffect } from 'react';
+import { friendSelector } from '../../store/friends/friends.selector';
 
 const BlockUser = ({ chatId }) => {
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -59,3 +60,16 @@ const BlockUser = ({ chatId }) => {
 };
 
 export default BlockUser;
+
+/*
+ * 	//> if user is already blocked
+	const { blocked } = useSelector(friendSelector);
+
+	useEffect(() => {
+		for (let id in blocked) {
+			if (chatId == id) {
+				console.log('already blocked');
+			}
+		}
+	}, [chatId, blocked]);
+ */

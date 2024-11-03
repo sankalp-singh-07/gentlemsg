@@ -5,6 +5,7 @@ import { MessageContext } from '../../../context/message.context';
 import { useSelector } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
 import { selectCurrentUser } from '../../../store/user/user.selector';
+import UnblockUser from '../../friends/unblockUser.component';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
@@ -13,25 +14,20 @@ const ChatsDialog = () => {
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [isUserBlockOther, setIsUserBlockOther] = useState(false);
+	const [blockAction, setBlockAction] = useState(null);
 
 	const { blocked } = useSelector(friendSelector);
 
 	useEffect(() => {
-		for (let id in blocked) {
-			if (id === chatId) {
-				setIsUserBlocked(true);
-				if (blocked[id].blockedBy === currentUser.id)
-					setIsUserBlockOther(true);
-				break;
-			}
+		const data = blocked[chatId];
+		if (data) {
+			setIsUserBlocked(true);
+			if (data.blockedBy === currentUser.id) setIsUserBlockOther(true);
+		} else {
+			setIsUserBlocked(false);
+			setIsUserBlockOther(false);
 		}
-	}, [blocked, chatId]);
-
-	console.log(isUserBlockOther);
-
-	// console.log(isUserBlocked);
-
-	const [blockId, setBlockId] = useState(null);
+	}, [blocked, chatId, currentUser.id]);
 
 	const menuRef = useRef(null);
 
@@ -50,7 +46,7 @@ const ChatsDialog = () => {
 	});
 
 	const handleBlockUserId = (chatId) => {
-		setBlockId(chatId);
+		setBlockAction(isUserBlocked && isUserBlockOther ? 'unblock' : 'block');
 	};
 
 	return (
@@ -86,7 +82,8 @@ const ChatsDialog = () => {
 				onClick={() => setOpenChatsDialog(!openChatsDialog)}
 				ref={menuRef}
 			/>
-			{blockId && <BlockUser chatId={blockId} />}
+			{blockAction === 'block' && <BlockUser chatId={chatId} />}
+			{blockAction === 'unblock' && <UnblockUser chatId={chatId} />}
 		</>
 	);
 };
