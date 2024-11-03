@@ -11,9 +11,8 @@ import { selectCurrentUser } from '../../store/user/user.selector';
 import { generateChatId } from '../messages/userChat';
 
 const FriendsList = () => {
-	const { friends } = useSelector(friendSelector);
+	const { friends, blocked } = useSelector(friendSelector);
 	const { currentUser } = useSelector(selectCurrentUser);
-
 	const [users, setUsers] = useState([]);
 	const [myFriends, setMyFriends] = useState([]);
 	const [loading, setLoading] = useState(true);
