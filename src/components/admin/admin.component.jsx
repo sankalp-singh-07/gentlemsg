@@ -9,18 +9,22 @@ import { getInitialData } from '../../store/thunks/thunks';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import Notifications from '../notifs/notifs.component';
 import Media from '../chat/childComponents/media.component';
+import UpdateProfile from '../profile/updateProfile.component';
 
 const Admin = () => {
 	const {
 		openFriendsDialog,
 		openNotifsDialog,
 		openMediaDialog,
+		openProfileDialog,
 		setOpenFriendsDialog,
 		setOpenNotifsDialog,
+		setOpenProfileDialog,
 	} = useContext(DialogContext);
 	const friendsDialogRef = useRef();
 	const notifsDialogRef = useRef();
 	const mediaDialogRef = useRef();
+	const profileDialogRef = useRef();
 	const dispatch = useDispatch();
 	const { currentUser } = useSelector(selectCurrentUser);
 
@@ -64,6 +68,22 @@ const Admin = () => {
 		};
 	}, [setOpenNotifsDialog]);
 
+	useEffect(() => {
+		const handleProfileDialog = (e) => {
+			if (
+				profileDialogRef.current &&
+				!profileDialogRef.current.contains(e.target)
+			)
+				setOpenProfileDialog(false);
+		};
+
+		window.addEventListener('click', handleProfileDialog);
+
+		return () => {
+			window.addEventListener('click', handleProfileDialog);
+		};
+	}, [setOpenProfileDialog]);
+
 	return (
 		<div className="w-screen h-screen flex">
 			<Dashboard />
@@ -72,6 +92,9 @@ const Admin = () => {
 			</div>
 			<div ref={notifsDialogRef}>
 				{openNotifsDialog && <Notifications />}
+			</div>
+			<div ref={profileDialogRef}>
+				{openProfileDialog && <UpdateProfile />}
 			</div>
 			<div ref={mediaDialogRef}>{openMediaDialog && <Media />}</div>
 		</div>
