@@ -216,6 +216,7 @@ const Chat = ({ inMobile }) => {
 								className="hidden"
 								onChange={handleFileUpload}
 								ref={fileInputRef}
+								disabled={isUserBlocked}
 							/>
 						</div>
 					</div>
@@ -236,6 +237,7 @@ const Chat = ({ inMobile }) => {
 				files={files}
 				currentUser={currentUser}
 				receiverData={receiverData}
+				isUserBlocked={isUserBlocked}
 			/>
 		</div>
 	);

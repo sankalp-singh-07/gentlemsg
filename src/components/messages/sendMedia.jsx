@@ -4,7 +4,7 @@ import { storage, db } from '../../utils/firebase';
 import { ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { sendMessage } from './sendMessage';
 
-const SendMedia = ({ files, currentUser, receiverData }) => {
+const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 	const [filesArr, setFilesArr] = useState([]);
 	const [sending, setSending] = useState('Send');
 
@@ -15,6 +15,10 @@ const SendMedia = ({ files, currentUser, receiverData }) => {
 	const { chatId } = useContext(MessageContext);
 
 	const uploadFile = async (file) => {
+		if (isUserBlocked) {
+			console.log("User Blocked. Can't upload file");
+			return;
+		}
 		const storageRef = ref(
 			storage,
 			`chats/${chatId}/${Date.now()}_${file.name}`
