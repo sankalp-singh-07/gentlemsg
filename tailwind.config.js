@@ -2,18 +2,18 @@
 
 export default {
 	content: ['./src/**/*.{js,jsx, css}'],
-	darkMode: false,
+	darkMode: 'class',
 	theme: {
 		extend: {
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
 			},
 			colors: {
-				primary: '#0077B6',
-				secondary: '#0081A7',
-				tertiary: '#F4F9FF',
-				quatery: '#DBEBFF',
-				black: '#01161E',
+				primary: 'var(--color-primary)',
+				secondary: 'var(--color-secondary)',
+				tertiary: 'var(--color-tertiary)',
+				quatery: 'var(--color-quatery)',
+				black: 'var(--color-black)',
 			},
 		},
 	},

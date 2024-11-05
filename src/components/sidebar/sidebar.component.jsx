@@ -6,6 +6,7 @@ import DropDownSetting from '../dropdown/dropdown.setting';
 import SearchFriends from '../friends/searchFriends.component';
 import { useRef, useState } from 'react';
 import ProfilePicture from '../profile/profilePicture.component';
+import DarkMode from '../darkMode/darkMode.component';
 
 const Sidebar = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -33,19 +34,19 @@ const Sidebar = () => {
 					</h1>
 				</div>
 				<div className="darkContainer">
-					<button className="darkEl">Dark</button>
+					<DarkMode />
 				</div>
 			</div>
 			<div className="mid">
 				<div className="userActions">
-					<div className="searchEl">
+					{/* <div className="searchEl">
 						<input
 							type="text"
 							placeholder="Search Users"
 							className="searchBarEl"
 						/>
 						<div className="underline"></div>
-					</div>
+					</div> */}
 					<div className="addNewUser ml-2">
 						<button
 							className="addUser"
