@@ -35,7 +35,7 @@
 }
 
 .addNewUser {
-    @apply w-12 p-4 h-10 rounded-md bg-primary text-white flex items-center justify-self-start relative
+    @apply w-full p-4 h-10 rounded-md bg-primary text-white flex items-center justify-self-start relative mr-2
 }
 
 .scrollbar-hide::-webkit-scrollbar {
