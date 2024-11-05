@@ -27,10 +27,10 @@ function App() {
 					dispatch(
 						setCurrentUser({
 							id: user.uid,
-							name: userData.displayName || user.displayName,
+							name: userData.name || user.displayName,
 							email: userData.email || user.email,
 							photoURL: userData.photoURL || user.photoURL,
-							userName: userData.userName || user.userName,
+							userName: userData.userName || user.displayName,
 						})
 					);
 				} else {
@@ -46,9 +46,8 @@ function App() {
 			} else {
 				dispatch(clearCurrentUser());
 			}
+			dispatch(setLoading(false));
 		});
-
-		dispatch(setLoading(false));
 
 		return () => unsubscribe();
 	}, [dispatch]);
