@@ -5,15 +5,16 @@ import NotFound from '../404/notfound.component';
 import Chat from '../chat/chat.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
+import '../../styles/components/loader.css';
 
 const Router = () => {
 	const { currentUser, loading } = useSelector(selectCurrentUser);
 
 	if (loading)
 		return (
-			<>
-				<h1>Loading</h1>
-			</>
+			<div className="w-full h-screen flex justify-center items-center">
+				<div class="loader"></div>
+			</div>
 		);
 
 	return (
