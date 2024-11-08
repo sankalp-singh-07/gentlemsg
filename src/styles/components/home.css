@@ -1,9 +1,9 @@
 .logo {
-    @apply absolute max-[450px]:left-3 left-9 sm:left-1/2 sm:transform sm:-translate-x-1/2 text-center text-xl sm:text-3xl font-semibold;
+    @apply absolute max-[450px]:left-3 left-9 sm:left-1/2 sm:transform sm:-translate-x-1/2 text-center text-xl sm:text-3xl font-semibold text-black;
 }
 
 .contact {
-    @apply text-base sm:text-lg font-medium sm:font-semibold ml-auto;
+    @apply text-base sm:text-lg font-medium sm:font-semibold ml-auto text-black;
 }
 
 .container-1 {

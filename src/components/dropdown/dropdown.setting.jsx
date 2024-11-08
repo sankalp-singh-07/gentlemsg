@@ -41,6 +41,11 @@ const DropDownSetting = () => {
 		setOpenNotifsDialog(true);
 	};
 
+	// const handleHelp = (e) => {
+	// 	e.stopPropagation();
+	// 	setShowDropDownSettings(false);
+	// };
+
 	useEffect(() => {
 		const handleClickOutside = (e) => {
 			if (e.target !== imgRef.current && e.target !== menuRef.current) {
@@ -88,12 +93,12 @@ const DropDownSetting = () => {
 						>
 							Log Out
 						</li>
-						<li
+						{/* <li
 							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
-							onClick={() => setShowDropDownSettings(false)}
+							onClick={handleHelp}
 						>
 							Help
-						</li>
+						</li> */}
 					</ul>
 				</div>
 			)}

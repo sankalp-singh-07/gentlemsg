@@ -1,6 +1,6 @@
 body {
     @apply font-sans;
-    background-color: #F4F9FF;
+    background-color: var(--color-tertiary);
     font-family: 'Inter', sans-serif;
     text-align: center;
 }
@@ -15,9 +15,9 @@ body {
 }
 
 .dark {
-	--color-primary: #0a4d68;
-	--color-secondary: #065a60;
-	--color-tertiary: #152c39;
-	--color-quatery: #2b3e50;
-	--color-black: #f5f5f5;
+	--color-primary: #0876a1;
+	--color-secondary: #08849a;
+	--color-tertiary: #172b35;
+	--color-quatery: #273743;
+	--color-black: #f4f9ff;
 }
