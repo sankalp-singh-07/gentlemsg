@@ -21,17 +21,15 @@ const UpdateProfile = () => {
 	const handleProfilePicChange = (e) => {
 		const file = e.target.files[0];
 		if (file) {
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				setNewProfilePic(reader.result);
-			};
-			reader.readAsDataURL(file);
+			setNewProfilePic(file);
+			setChangePic(true);
 		}
 	};
 
 	const changeUserName = async () => {
 		const userRef = doc(db, 'users', currentUser.id);
 		await updateDoc(userRef, { userName: username });
+		dispatch(setCurrentUser({ ...currentUser, userName: username }));
 	};
 
 	const changeProfileName = async () => {
