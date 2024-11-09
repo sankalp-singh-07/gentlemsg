@@ -79,7 +79,7 @@ const FriendsList = () => {
 							alt="..."
 							className="w-8 h-8 rounded-full md:w-12 md:h-12"
 						/>
-						<h1 className="text-sm text-center font-medium min-w-fit lg:text-base">
+						<h1 className="text-sm text-center font-medium min-w-fit lg:text-base text-black">
 							{friend.name}
 						</h1>
 					</div>

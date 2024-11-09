@@ -88,22 +88,25 @@ const Notifications = () => {
 								alt="..."
 								className="w-10 h-10 rounded-full"
 							/>
-							<p className="text-md text-start">
+							<p className="text-md text-start text-black">
 								{messageGen(notif)}
 							</p>
 						</div>
 						<div className="flex gap-2 items-center text-end ">
-							<p className="text-sm">
+							<p className="text-sm text-black">
 								{getDate(notif.createdAt)}
 							</p>
-							<button onClick={() => handleDelete(notif)}>
+							<button
+								onClick={() => handleDelete(notif)}
+								className="text-black"
+							>
 								X
 							</button>
 						</div>
 					</div>
 				))}
 				<button
-					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
+					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9 hover:text-white"
 					onClick={() => setOpenNotifsDialog(false)}
 				>
 					Close

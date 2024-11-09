@@ -67,13 +67,13 @@ const UpdateProfile = () => {
 						/>
 						<label
 							htmlFor="profilePicInput"
-							className="text-sm text-start text-tertiary cursor-pointer"
+							className="text-sm text-start text-black cursor-pointer"
 						>
 							Change Profile Picture
 						</label>
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
-						<label className="text-sm text-start text-tertiary cursor-pointer">
+						<label className="text-sm text-start text-black cursor-pointer">
 							Username
 						</label>
 						<input
@@ -81,11 +81,11 @@ const UpdateProfile = () => {
 							placeholder="Enter username"
 							value={username}
 							onChange={(e) => setUsername(e.target.value)}
-							className="w-full outline-none py-1 px-3 bg-tertiary"
+							className="w-full outline-none py-1 px-3 bg-tertiary text-black"
 						/>
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
-						<label className="text-sm text-start text-tertiary cursor-pointer">
+						<label className="text-sm text-start text-black cursor-pointer">
 							Name
 						</label>
 						<input
@@ -93,12 +93,12 @@ const UpdateProfile = () => {
 							placeholder="Enter Name"
 							value={profileName}
 							onChange={(e) => setProfileName(e.target.value)}
-							className="w-full outline-none py-1 px-3 bg-tertiary"
+							className="w-full outline-none py-1 px-3 bg-tertiary text-black"
 						/>
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
 						<button
-							className="bg-tertiary w-full rounded-md px-4 text-lg font-medium text-secondary"
+							className="bg-tertiary w-full rounded-md px-4 text-lg font-medium text-black hover:bg-primary hover:text-tertiary"
 							onClick={handleSaveChange}
 						>
 							Save Changes

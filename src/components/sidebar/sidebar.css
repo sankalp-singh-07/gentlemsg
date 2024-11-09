@@ -7,11 +7,11 @@
 }
 
 .title {
-    @apply text-xl font-semibold
+    @apply text-xl font-semibold text-black
 }
 
 .darkEl {
-    @apply border-none p-2 rounded-md bg-primary text-tertiary
+    @apply border-none p-2 rounded-full h-10 w-10 flex justify-center items-center bg-primary text-tertiary
 }
 
 .mid {
@@ -64,7 +64,7 @@
 }
 
 .userChatInfo {
-    @apply flex flex-col w-9/12 items-start justify-center ml-2
+    @apply flex flex-col w-9/12 items-start justify-center ml-2 text-neutral-950
 }
 
 .userName {
@@ -72,11 +72,11 @@
 }
 
 .userMessage {
-    @apply text-sm font-normal
+    @apply text-sm font-normal 
 }
 
 .userChatDetails {
-    @apply flex items-end w-1/12 justify-between flex-col font-normal
+    @apply flex items-end w-1/12 justify-between flex-col font-normal text-neutral-950
 }
 
 .userChatNotif {

@@ -1,19 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { DarkModeContext } from '../../context/dark.context';
 
 const DarkMode = () => {
-	const [isDark, setIsDark] = useState(
-		() => localStorage.getItem('theme') === 'dark'
-	);
-
-	useEffect(() => {
-		if (isDark) {
-			document.documentElement.classList.add('dark');
-			localStorage.setItem('theme', 'dark');
-		} else {
-			document.documentElement.classList.remove('dark');
-			localStorage.setItem('theme', 'light');
-		}
-	}, [isDark]);
+	const { isDark, setIsDark } = useContext(DarkModeContext);
 
 	const toggleDarkMode = () => {
 		setIsDark(!isDark);
@@ -21,7 +10,11 @@ const DarkMode = () => {
 
 	return (
 		<button onClick={toggleDarkMode} className="darkEl">
-			{isDark ? 'Light' : 'Dark'}
+			{isDark ? (
+				<img src="src\assets\light.svg" />
+			) : (
+				<img src="src\assets\dark.svg" />
+			)}
 		</button>
 	);
 };

@@ -80,7 +80,7 @@ const Sidebar = () => {
 						/>
 					</div>
 					<div className="userProfileInfo">
-						<h1 className="text-base font-medium">
+						<h1 className="text-base font-medium text-black">
 							{currentUser.name}
 						</h1>
 					</div>

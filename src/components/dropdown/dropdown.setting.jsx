@@ -3,8 +3,10 @@ import { useRef } from 'react';
 import SignOutHandler from '../auth/handlers/sign-out-handler.component';
 import { useContext } from 'react';
 import { DialogContext } from '../../context/dialog.context';
+import { DarkModeContext } from '../../context/dark.context';
 
 const DropDownSetting = () => {
+	const { isDark } = useContext(DarkModeContext);
 	const [showDropDownSettings, setShowDropDownSettings] = useState(false);
 	const [isRotated, setIsRotated] = useState(false);
 	const imgRef = useRef();
@@ -66,7 +68,7 @@ const DropDownSetting = () => {
 			{showDropDownSettings && (
 				<div
 					ref={menuRef}
-					className="flex flex-col absolute bottom-8 right-4 text-start border-2 px-4 py-4 rounded-md bg-tertiary"
+					className="flex flex-col absolute bottom-8 right-4 text-start border-2 px-4 py-4 rounded-md bg-tertiary text-black"
 				>
 					<ul className="flex flex-col gap-3">
 						<li
@@ -88,7 +90,7 @@ const DropDownSetting = () => {
 							Notifications
 						</li>
 						<li
-							className="hover:bg-red-500 hover:text-tertiary pl-4 py-3 rounded-md cursor-pointer"
+							className="hover:bg-red-500 hover:text-white pl-4 py-3 rounded-md cursor-pointer"
 							onClick={handleLogOut}
 						>
 							Log Out
@@ -102,15 +104,27 @@ const DropDownSetting = () => {
 					</ul>
 				</div>
 			)}
-			<img
-				src="src\assets\gear.png"
-				alt="settings"
-				className={`w-full h-full cursor-pointer transform transition-transform duration-200 ${
-					isRotated ? 'rotate-90' : ''
-				}`}
-				onClick={handleIconClick}
-				ref={imgRef}
-			/>
+			{isDark ? (
+				<img
+					src="src\assets\gearL.png"
+					alt="settings"
+					className={`w-full h-full cursor-pointer transform transition-transform duration-200 ${
+						isRotated ? 'rotate-90' : ''
+					}`}
+					onClick={handleIconClick}
+					ref={imgRef}
+				/>
+			) : (
+				<img
+					src="src\assets\gearD.png"
+					alt="settings"
+					className={`w-full h-full cursor-pointer transform transition-transform duration-200 ${
+						isRotated ? 'rotate-90' : ''
+					}`}
+					onClick={handleIconClick}
+					ref={imgRef}
+				/>
+			)}
 		</>
 	);
 };
