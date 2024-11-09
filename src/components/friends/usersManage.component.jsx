@@ -34,7 +34,7 @@ const UsersManagement = () => {
 			</div>
 			<div className="flex flex-1 justify-between items-center absolute bottom-0 left-0 right-0">
 				<button
-					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9"
+					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9 hover:text-white"
 					onClick={() => setOpenFriendsDialog(false)}
 				>
 					Close

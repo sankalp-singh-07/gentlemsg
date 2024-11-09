@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import ChatsDialog from './childComponents/chatsDialog.component';
 import SendMedia from '../messages/sendMedia';
 import { friendSelector } from '../../store/friends/friends.selector';
+import { DarkModeContext } from '../../context/dark.context';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -28,6 +29,8 @@ const Chat = ({ inMobile }) => {
 	const fileInputRef = useRef(null);
 	const [files, setFiles] = useState([]);
 	const navigate = useNavigate();
+
+	const { isDark } = useContext(DarkModeContext);
 
 	useEffect(() => {
 		if (!blocked || !chatId || !currentUser) return;
@@ -150,10 +153,17 @@ const Chat = ({ inMobile }) => {
 						<p className="sub flex justify-between items-center bg-black sm:py-0.5 sm:px-2 px-1.5 py-0.5 rounded-xl">
 							{receiverData.isOnline ? 'Active' : 'Offline'}
 							<span>
-								<img
-									src="src/assets/active.png"
-									className="w-2 h-2 ml-3"
-								/>
+								{receiverData.isOnline ? (
+									<img
+										src="src/assets/active.png"
+										className="w-2 h-2 ml-3"
+									/>
+								) : (
+									<img
+										src="src/assets/offline.png"
+										className="w-2 h-2 ml-3"
+									/>
+								)}
 							</span>
 						</p>
 					</div>
@@ -176,7 +186,11 @@ const Chat = ({ inMobile }) => {
 					<div className="inputEl">
 						<div className="relative">
 							<img
-								src="src/assets/happy.png"
+								src={
+									isDark
+										? `src/assets/happinessL.png`
+										: `src/assets/happinessD.png`
+								}
 								alt="emoji"
 								className="w-6 h-6 ml-2 cursor-pointer"
 								onClick={() =>
@@ -196,7 +210,7 @@ const Chat = ({ inMobile }) => {
 							placeholder={
 								isUserBlocked ? blockText : 'Type a message'
 							}
-							className="w-full h-full outline-none px-4 md:m-3 bg-quatery"
+							className="w-full h-full outline-none px-4 md:m-3 bg-quatery text-black"
 							onChange={(e) => setText(e.target.value)}
 							onKeyDown={handleEnterSend}
 							value={text}
@@ -205,7 +219,11 @@ const Chat = ({ inMobile }) => {
 						/>
 						<div>
 							<img
-								src="src/assets/folder.png"
+								src={
+									isDark
+										? `src/assets/folderL.png`
+										: `src/assets/folderD.png`
+								}
 								alt="mic"
 								className="w-6 h-6 mr-2 cursor-pointer"
 								onClick={handeleUpload}
@@ -226,7 +244,11 @@ const Chat = ({ inMobile }) => {
 						disabled={isUserBlocked}
 					>
 						<img
-							src="src/assets/send.png"
+							src={
+								isDark
+									? `src/assets/sendL.png`
+									: `src/assets/sendD.png`
+							}
 							alt="send"
 							className="w-8 h-8 cursor-pointer"
 						/>

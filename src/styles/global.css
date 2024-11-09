@@ -10,6 +10,7 @@ body {
 	--color-primary: #0077b6;
 	--color-secondary: #0081a7;
 	--color-tertiary: #f4f9ff;
+	--color-tertiary-hover: #f4f9ff;
 	--color-quatery: #dbebff;
 	--color-black: #01161e;
 }
@@ -18,6 +19,7 @@ body {
 	--color-primary: #0876a1;
 	--color-secondary: #08849a;
 	--color-tertiary: #172b35;
+	--color-tertiary-hover: #8dd2f5;
 	--color-quatery: #273743;
 	--color-black: #f4f9ff;
 }

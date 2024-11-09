@@ -106,7 +106,7 @@ const Messages = ({ receiverImg }) => {
 									</div>
 								))
 							)}
-							<span className="flex self-end text-sm font-normal">
+							<span className="flex self-end text-sm font-normal text-black">
 								{getDate(message.sentAt)}
 							</span>
 						</div>

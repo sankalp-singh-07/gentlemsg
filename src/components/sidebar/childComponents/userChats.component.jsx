@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectChats } from '../../../store/chats/chats.selector';
 import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
+
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../utils/firebase';
 import { useContext } from 'react';
@@ -125,7 +126,7 @@ const UserChats = () => {
 						key={chat.chatId}
 					>
 						<div
-							className={`userChat hover:bg-tertiary px-2 py-2 rounded-md ${
+							className={`userChat hover:bg-tertiaryHover px-2 py-2 rounded-md ${
 								chat.isSeen ? 'bg-tertiary' : 'bg-sky-200'
 							}`}
 						>
