@@ -7,7 +7,7 @@ import { arrayRemove, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
 import './notifs.styles.css';
 
-const Notifications = () => {
+const Notifs = () => {
 	const { notifs } = useSelector(friendSelector);
 	const { setOpenNotifsDialog } = useContext(DialogContext);
 	const [notifications, setNotifications] = useState([]);
@@ -116,4 +116,4 @@ const Notifications = () => {
 	);
 };
 
-export default Notifications;
+export default Notifs;
