@@ -1,10 +1,10 @@
 import { useSelector } from 'react-redux';
-import { friendSelector } from '../../store/friends/friends.selector';
+import { friendSelector } from '../../../store/friends/friends.selector';
 import { useContext, useEffect } from 'react';
-import { DialogContext } from '../../context/dialog.context';
+import { DialogContext } from '../../../context/dialog.context';
 import { useState } from 'react';
 import { arrayRemove, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../utils/firebase';
+import { db } from '../../../utils/firebase';
 import './notifs.styles.css';
 
 const Notifs = () => {
