@@ -7,9 +7,9 @@ import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { getInitialData } from '../../store/thunks/thunks';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import Notifications from '../notifs/notifs.component';
 import Media from '../chat/childComponents/media.component';
 import UpdateProfile from '../profile/updateProfile.component';
+import Notifs from '../notifs/notifs.component';
 
 const Admin = () => {
 	const {
@@ -90,9 +90,7 @@ const Admin = () => {
 			<div ref={friendsDialogRef}>
 				{openFriendsDialog && <UsersManagement />}
 			</div>
-			<div ref={notifsDialogRef}>
-				{openNotifsDialog && <Notifications />}
-			</div>
+			<div ref={notifsDialogRef}>{openNotifsDialog && <Notifs />}</div>
 			<div ref={profileDialogRef}>
 				{openProfileDialog && <UpdateProfile />}
 			</div>
