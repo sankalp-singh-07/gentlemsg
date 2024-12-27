@@ -17,7 +17,7 @@ const Home = () => {
 				<p className="logo">
 					Gentle<span className="dot">.</span>MSG
 				</p>
-				<Link className="contact" to="/s">
+				<Link className="contact" to="/contact-us">
 					CONTACT US
 				</Link>
 			</div>
@@ -26,10 +26,17 @@ const Home = () => {
 				<h1 className="heading text-7xl md:text-5xl lg:text-7xl max-md:hidden pr-1  mt-14 mb-7 text-black font-bold flex items-center">
 					Message
 					<div>
-						<img
-							className="w-[8vw] px-3 h-[15vh]"
-							src="src\assets\fly.svg"
-						/>
+						{isDark ? (
+							<img
+								className="w-[8vw] px-3 h-[15vh]"
+								src="src\assets\fly2.svg"
+							/>
+						) : (
+							<img
+								className="w-[8vw] px-3 h-[15vh]"
+								src="src\assets\fly.svg"
+							/>
+						)}
 					</div>
 				</h1>
 				<h1 className="heading text-7xl md:text-5xl lg:text-7xl max-md:hidden  mt-14 mb-7 text-black font-bold pl-1">

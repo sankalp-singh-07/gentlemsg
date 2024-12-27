@@ -6,6 +6,7 @@ import Chat from '../chat/chat.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import '../../styles/components/loader.css';
+import ContactUs from '../contact-us/contactUs.component';
 
 const Router = () => {
 	const { currentUser, loading } = useSelector(selectCurrentUser);
@@ -29,6 +30,7 @@ const Router = () => {
 					element={currentUser ? <Admin /> : <Navigate to="/" />}
 				/>
 				<Route path="*" element={<NotFound />} />
+				<Route path="/contact-us" element={<ContactUs />} />
 				<Route path="/chat" element={<Chat inMobile="show" />} />
 			</Routes>
 		</BrowserRouter>
