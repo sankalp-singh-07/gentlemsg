@@ -1,22 +1,22 @@
 .sign-in-button {
-    @apply inline-flex items-center px-6 sm:px-9 py-3 font-semibold rounded-full transition-colors duration-300 ease-in-out text-xl bg-primary;
-    color: #F4F9FF;
-    box-shadow: 0 2px 4px #0076b672;
+	@apply inline-flex items-center px-6 sm:px-9 py-3 font-semibold rounded-full transition-colors duration-300 ease-in-out text-base sm:text-xl bg-primary;
+	color: #f4f9ff;
+	box-shadow: 0 2px 4px #0076b672;
 }
 
 .sign-in-button:hover {
-    background-color: #006ba4;
+	background-color: #006ba4;
 }
 
 .arrow {
-    @apply ml-2 transition-transform duration-300 ease-in-out transform;
-    width: 36px;
-    height: 32px;
-    transform: rotate(-45deg);
-    border-radius: 100%;
-    fill: currentColor;
+	@apply ml-2 transition-transform duration-300 ease-in-out transform;
+	width: 36px;
+	height: 32px;
+	transform: rotate(-45deg);
+	border-radius: 100%;
+	fill: currentColor;
 }
 
 .sign-in-button:hover .arrow {
-    transform: rotate(0deg);
+	transform: rotate(0deg);
 }
