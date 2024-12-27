@@ -4,6 +4,7 @@ import SignOutHandler from '../auth/handlers/sign-out-handler.component';
 import { useContext } from 'react';
 import { DialogContext } from '../../context/dialog.context';
 import { DarkModeContext } from '../../context/dark.context';
+import { useNavigate } from 'react-router-dom';
 
 const DropDownSetting = () => {
 	const { isDark } = useContext(DarkModeContext);
@@ -43,10 +44,13 @@ const DropDownSetting = () => {
 		setOpenNotifsDialog(true);
 	};
 
-	// const handleHelp = (e) => {
-	// 	e.stopPropagation();
-	// 	setShowDropDownSettings(false);
-	// };
+	const navigate = useNavigate();
+
+	const handleHelp = (e) => {
+		e.stopPropagation();
+		setShowDropDownSettings(false);
+		navigate('/faqs');
+	};
 
 	useEffect(() => {
 		const handleClickOutside = (e) => {
@@ -95,12 +99,12 @@ const DropDownSetting = () => {
 						>
 							Log Out
 						</li>
-						{/* <li
+						<li
 							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
 							onClick={handleHelp}
 						>
 							Help
-						</li> */}
+						</li>
 					</ul>
 				</div>
 			)}
