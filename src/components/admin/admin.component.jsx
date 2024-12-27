@@ -9,7 +9,7 @@ import { getInitialData } from '../../store/thunks/thunks';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import Media from '../chat/childComponents/media.component';
 import UpdateProfile from '../profile/updateProfile.component';
-import Notifs from '../notifs/notifs.component';
+import Notifs from '../../../src/components/notifs/notifs.component';
 
 const Admin = () => {
 	const {
