@@ -33,7 +33,7 @@ const Media = () => {
 	}, [chatId]);
 
 	return (
-		<div className="bg-secondary  max-md:w-11/12 max-lg:w-9/12 w-6/12 h-5/6  m-auto top-0 right-0 bottom-0 left-0 overflow-scroll absolute shadow-2xl">
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 md:h-5/6 h-3/6  m-auto top-0 right-0 bottom-0 left-0 overflow-scroll rounded-lg absolute shadow-2xl">
 			<div className="grid grid-cols-3 grid-rows-3">
 				{mediaData.map((media, index) => {
 					return (
@@ -71,7 +71,7 @@ const Media = () => {
 					);
 				})}
 			</div>
-			<div>
+			<div className="flex justify-center items-baseline ">
 				<button
 					className="w-full h-14 bg-quatery text-secondary font-semibold"
 					onClick={() => setOpenMediaDialog(false)}

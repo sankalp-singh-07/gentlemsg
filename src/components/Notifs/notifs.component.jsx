@@ -72,7 +72,7 @@ const Notifications = () => {
 	};
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md rounded-lg">
 			<div
 				className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row "
 				style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}
@@ -106,7 +106,7 @@ const Notifications = () => {
 					</div>
 				))}
 				<button
-					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9 hover:text-white"
+					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9 hover:text-zinc-950 dark:hover:text-zinc-50 rounded-md"
 					onClick={() => setOpenNotifsDialog(false)}
 				>
 					Close

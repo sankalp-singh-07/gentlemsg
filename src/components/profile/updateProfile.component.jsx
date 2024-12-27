@@ -46,7 +46,7 @@ const UpdateProfile = () => {
 
 	return (
 		<>
-			<div className="bg-secondary max-md:w-8/12 max-lg:w-6/12 w-3/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md">
+			<div className="bg-secondary max-md:w-8/12 max-lg:w-6/12 w-3/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md rounded-lg">
 				<div
 					className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row"
 					style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}
@@ -98,7 +98,7 @@ const UpdateProfile = () => {
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
 						<button
-							className="bg-tertiary w-full rounded-md px-4 text-lg font-medium text-black hover:bg-primary hover:text-tertiary"
+							className="bg-tertiary w-full rounded-md px-4 text-lg font-medium text-black hover:bg-primary hover:text-tertiary h-12 dark:hover:text-zinc-50"
 							onClick={handleSaveChange}
 						>
 							Save Changes
