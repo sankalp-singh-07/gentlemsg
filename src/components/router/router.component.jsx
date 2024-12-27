@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import '../../styles/components/loader.css';
 import ContactUs from '../contact-us/contactUs.component';
+import FAQ from '../faq/faq.component';
 
 const Router = () => {
 	const { currentUser, loading } = useSelector(selectCurrentUser);
@@ -31,6 +32,7 @@ const Router = () => {
 				/>
 				<Route path="*" element={<NotFound />} />
 				<Route path="/contact-us" element={<ContactUs />} />
+				<Route path="/faqs" element={<FAQ />} />
 				<Route path="/chat" element={<Chat inMobile="show" />} />
 			</Routes>
 		</BrowserRouter>

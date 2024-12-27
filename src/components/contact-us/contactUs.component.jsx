@@ -16,7 +16,7 @@ const ContactUs = () => {
 	};
 
 	const handleSubmit = async (e) => {
-		e.preventDefault(); // Prevent default form submission
+		e.preventDefault();
 
 		try {
 			const response = await fetch('https://formspree.io/f/myzzelej', {
@@ -29,7 +29,7 @@ const ContactUs = () => {
 
 			if (response.ok) {
 				alert('Message sent successfully!');
-				window.location.href = '/'; // Redirect to the home page
+				window.location.href = '/';
 			} else {
 				throw new Error('Form submission failed');
 			}
