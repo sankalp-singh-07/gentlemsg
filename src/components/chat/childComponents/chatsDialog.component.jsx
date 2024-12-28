@@ -9,6 +9,8 @@ import UnblockUser from '../../friends/unblockUser.component';
 import menuDark from '../../../assets/dots1.png';
 import menuLight from '../../../assets/dots.png';
 import { DarkModeContext } from '../../../context/dark.context';
+import dots1 from '../../../assets/dots1.png';
+import dots2 from '../../../assets/dots.png';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
@@ -82,16 +84,16 @@ const ChatsDialog = () => {
 
 			{isDark ? (
 				<img
-					src="src\assets\dots1.png"
-					alt="video"
+					src={dots1}
+					alt="menu"
 					className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4 cursor-pointer"
 					onClick={() => setOpenChatsDialog(!openChatsDialog)}
 					ref={menuRef}
 				/>
 			) : (
 				<img
-					src="src\assets\dots.png"
-					alt="video"
+					src={dots2}
+					alt="menu"
 					className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4 cursor-pointer"
 					onClick={() => setOpenChatsDialog(!openChatsDialog)}
 					ref={menuRef}
