@@ -6,6 +6,16 @@ import { useContext } from 'react';
 import { DarkModeContext } from '../../context/dark.context';
 import fly1 from '../../assets/fly.svg';
 import fly2 from '../../assets/fly2.svg';
+import secure1 from '../../assets/secure.png';
+import secure2 from '../../assets/secure2.png';
+import secure3 from '../../assets/secure3.png';
+import chat1 from '../../assets/chat-simple.png';
+import chat2 from '../../assets/chat2.png';
+import chat3 from '../../assets/chat3.png';
+import chat4 from '../../assets/chat4.png';
+import dl1 from '../../assets/DL.png';
+import dl2 from '../../assets/DL2.png';
+import dl3 from '../../assets/DL3.png';
 
 const Home = () => {
 	const { isDark } = useContext(DarkModeContext);
@@ -84,48 +94,48 @@ const Home = () => {
 
 			<SignIn />
 
-			<div className="flex w-full h-36 sm:h-52 space-x-6 items-end px-8 mb-6 max-lg:mt-6">
-				<div className="flex-1 h-36 sm:h-52 bg-secondary rounded-lg overflow-hidden">
+			<div className="flex w-full h-96 sm:h-52 space-x-6 items-end px-8 mb-6 max-lg:mt-6">
+				<div className="flex-1 h-96 sm:h-52 bg-secondary rounded-lg overflow-hidden">
 					<img
 						className="w-full h-full  hidden lg:block"
-						src="src/assets/secure.png"
-						alt="secure"
+						src={secure1}
+						alt="secure1"
 					/>
 					<img
 						className="w-full h-full hidden md:block lg:hidden"
-						src="src/assets/secure2.png"
-						alt="secure"
+						src={secure2}
+						alt="secure2"
 					/>
 					<img
 						className="w-full h-full hidden sm:block md:hidden lg:hidden"
-						src="src/assets/secure3.png"
-						alt="secure"
+						src={secure3}
+						alt="secure3"
 					/>
 					<img
-						className="w-full h-full block min-[640px]:hidden max-[400px]:hidden"
-						src="src/assets/chat2.png"
+						className="w-full h-full block min-[640px]:hidden max-[400px]:hidden bg-red-100"
+						src={chat4}
 						alt="Chat 3"
 					/>
 					<img
 						className="w-full h-full block min-[400px]:hidden"
-						src="src/assets/chat2.png"
+						src={chat4}
 						alt="Chat 3"
 					/>
 				</div>
 				<div className="flex-1 max-sm:hidden h-44 mt-4 bg-secondary rounded-lg overflow-hidden">
 					<img
 						className="w-full h-full  hidden lg:block"
-						src="src/assets/chat-simple.png"
+						src={chat1}
 						alt="Chat Simple"
 					/>
 					<img
 						className="w-full h-full hidden md:block lg:hidden"
-						src="src/assets/chat2.png"
+						src={chat2}
 						alt="Chat 2"
 					/>
 					<img
 						className="w-full h-full hidden sm:block md:hidden lg:hidden"
-						src="src/assets/chat3.png"
+						src={chat3}
 						alt="Chat 3"
 					/>
 				</div>
@@ -133,17 +143,17 @@ const Home = () => {
 				<div className="flex-1 max-sm:hidden overflow-hidden h-52 bg-secondary rounded-lg">
 					<img
 						className="w-full h-full  hidden lg:block"
-						src="src/assets/DL.png"
+						src={dl1}
 						alt="dl"
 					/>
 					<img
 						className="w-full h-full hidden md:block lg:hidden"
-						src="src/assets/DL2.png"
+						src={dl2}
 						alt="dl2"
 					/>
 					<img
 						className="w-full h-full hidden sm:block md:hidden lg:hidden"
-						src="src/assets/DL3.png"
+						src={dl3}
 						alt="dl3"
 					/>
 				</div>
