@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import DarkMode from '../darkMode/darkMode.component';
 import { useContext } from 'react';
 import { DarkModeContext } from '../../context/dark.context';
+import fly1 from '../../assets/fly.svg';
+import fly2 from '../../assets/fly2.svg';
 
 const Home = () => {
 	const { isDark } = useContext(DarkModeContext);
@@ -27,15 +29,9 @@ const Home = () => {
 					Message
 					<div>
 						{isDark ? (
-							<img
-								className="w-[8vw] px-3 h-[15vh]"
-								src="src\assets\fly2.svg"
-							/>
+							<img className="w-[8vw] px-3 h-[15vh]" src={fly2} />
 						) : (
-							<img
-								className="w-[8vw] px-3 h-[15vh]"
-								src="src\assets\fly.svg"
-							/>
+							<img className="w-[8vw] px-3 h-[15vh]" src={fly1} />
 						)}
 					</div>
 				</h1>
