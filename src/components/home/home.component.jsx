@@ -94,8 +94,8 @@ const Home = () => {
 
 			<SignIn />
 
-			<div className="flex w-full h-96 sm:h-52 space-x-6 items-end px-8 mb-6 max-lg:mt-6">
-				<div className="flex-1 h-96 sm:h-52 bg-secondary rounded-lg overflow-hidden">
+			<div className="flex w-full h-80 sm:h-52 space-x-6 items-end px-8 mb-6 max-lg:mt-6">
+				<div className="flex-1 h-80 sm:h-52 bg-secondary rounded-lg overflow-hidden">
 					<img
 						className="w-full h-full  hidden lg:block"
 						src={secure1}

@@ -14,6 +14,15 @@ import ChatsDialog from './childComponents/chatsDialog.component';
 import SendMedia from '../messages/sendMedia';
 import { friendSelector } from '../../store/friends/friends.selector';
 import { DarkModeContext } from '../../context/dark.context';
+import profileImg from '../../assets/profile.png';
+import active from '../../assets/active.png';
+import offline from '../../assets/offline.png';
+import happyL from '../../assets/happinessL.png';
+import happyD from '../../assets/happinessD.png';
+import folderL from '../../assets/folderL.png';
+import folderD from '../../assets/folderD.png';
+import sendL from '../../assets/sendL.png';
+import sendD from '../../assets/sendD.png';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -140,7 +149,7 @@ const Chat = ({ inMobile }) => {
 						/>
 					) : (
 						<img
-							src="src/assets/profile.png"
+							src={profileImg}
 							alt="profile"
 							className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
 						/>
@@ -155,12 +164,12 @@ const Chat = ({ inMobile }) => {
 							<span>
 								{receiverData.isOnline ? (
 									<img
-										src="src/assets/active.png"
+										src={active}
 										className="w-2 h-2 ml-3"
 									/>
 								) : (
 									<img
-										src="src/assets/offline.png"
+										src={offline}
 										className="w-2 h-2 ml-3"
 									/>
 								)}
@@ -186,11 +195,7 @@ const Chat = ({ inMobile }) => {
 					<div className="inputEl">
 						<div className="relative">
 							<img
-								src={
-									isDark
-										? `src/assets/happinessL.png`
-										: `src/assets/happinessD.png`
-								}
+								src={isDark ? happyL : happyD}
 								alt="emoji"
 								className="w-6 h-6 ml-2 cursor-pointer"
 								onClick={() =>
@@ -219,11 +224,7 @@ const Chat = ({ inMobile }) => {
 						/>
 						<div>
 							<img
-								src={
-									isDark
-										? `src/assets/folderL.png`
-										: `src/assets/folderD.png`
-								}
+								src={isDark ? folderL : folderD}
 								alt="mic"
 								className="w-6 h-6 mr-2 cursor-pointer"
 								onClick={handeleUpload}
@@ -244,11 +245,7 @@ const Chat = ({ inMobile }) => {
 						disabled={isUserBlocked}
 					>
 						<img
-							src={
-								isDark
-									? `src/assets/sendL.png`
-									: `src/assets/sendD.png`
-							}
+							src={isDark ? sendL : sendD}
 							alt="send"
 							className="w-8 h-8 cursor-pointer"
 						/>

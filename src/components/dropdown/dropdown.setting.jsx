@@ -5,6 +5,8 @@ import { useContext } from 'react';
 import { DialogContext } from '../../context/dialog.context';
 import { DarkModeContext } from '../../context/dark.context';
 import { useNavigate } from 'react-router-dom';
+import gearL from '../../assets/gearL.png';
+import gearD from '../../assets/gearD.png';
 
 const DropDownSetting = () => {
 	const { isDark } = useContext(DarkModeContext);
@@ -110,7 +112,7 @@ const DropDownSetting = () => {
 			)}
 			{isDark ? (
 				<img
-					src="src\assets\gearL.png"
+					src={gearL}
 					alt="settings"
 					className={`w-full h-full cursor-pointer transform transition-transform duration-200 ${
 						isRotated ? 'rotate-90' : ''
@@ -120,7 +122,7 @@ const DropDownSetting = () => {
 				/>
 			) : (
 				<img
-					src="src\assets\gearD.png"
+					src={gearD}
 					alt="settings"
 					className={`w-full h-full cursor-pointer transform transition-transform duration-200 ${
 						isRotated ? 'rotate-90' : ''
