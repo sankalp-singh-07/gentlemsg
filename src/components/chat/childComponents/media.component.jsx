@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
 import { MessageContext } from '../../../context/message.context';
 import { getDownloadURL, getMetadata, listAll, ref } from 'firebase/storage';
@@ -9,9 +9,12 @@ const Media = () => {
 	const { chatId } = useContext(MessageContext);
 	const { setOpenMediaDialog } = useContext(DialogContext);
 	const [mediaData, setMediaData] = useState([]);
+	const [isLoading, setIsLoading] = useState(true); // Loading state
+	const dialogRef = useRef(null);
 
 	useEffect(() => {
 		const fetchFiles = async () => {
+			setIsLoading(true); // Start loading
 			const listRef = ref(storage, `chats/${chatId}`);
 
 			try {
@@ -25,28 +28,62 @@ const Media = () => {
 				);
 				setMediaData(data);
 			} catch (error) {
-				console.log('Error fetching media files', error);
+				console.error('Error fetching media files', error);
+			} finally {
+				setIsLoading(false); // End loading
 			}
 		};
 
 		fetchFiles();
 	}, [chatId]);
 
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (
+				dialogRef.current &&
+				!dialogRef.current.contains(event.target)
+			) {
+				setOpenMediaDialog(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [setOpenMediaDialog]);
+
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 md:h-5/6 h-3/6  m-auto top-0 right-0 bottom-0 left-0 overflow-scroll rounded-lg absolute shadow-2xl">
-			<div className="grid grid-cols-3 grid-rows-3">
-				{mediaData.map((media, index) => {
-					return (
-						<div key={index}>
+		<div
+			ref={dialogRef}
+			className="bg-secondary w-80 h-96 absolute top-4 right-4 overflow-scroll rounded-lg shadow-2xl"
+		>
+			{isLoading && (
+				<div className="flex justify-center items-center h-full">
+					<p>Loading...</p>
+				</div>
+			)}
+			{!isLoading && (
+				<div className="grid grid-cols-3 gap-2 p-4">
+					{mediaData.map((media, index) => (
+						<div key={index} className="relative">
 							{media.contentType.includes('image') ? (
 								<img
 									src={media.url}
 									alt={`media-${index}`}
-									className="w-10/12 h-10/12 m-5"
-									onClick={() => window.open(media.url)}
+									className="w-full h-full object-cover rounded"
+									onClick={() =>
+										window.open(media.url, '_blank')
+									}
 								/>
 							) : media.contentType.includes('video') ? (
-								<video controls>
+								<video
+									controls
+									className="w-full h-full object-cover rounded"
+									onClick={() =>
+										window.open(media.url, '_blank')
+									}
+								>
 									<source src={media.url} type="video/mp4" />
 								</video>
 							) : media.contentType === 'application/pdf' ? (
@@ -54,31 +91,19 @@ const Media = () => {
 									href={media.url}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="media-pdf text-inherit w-full h-full flex justify-center items-center"
-									style={{
-										backgroundImage: `url(${pdfIcon})`,
-										backgroundRepeat: 'no-repeat',
-										backgroundPosition: 'center',
-										backgroundSize: 'contain',
-									}}
+									className="flex items-center justify-center w-full h-full bg-gray-200 rounded"
 								>
-									...
+									<img
+										src={pdfIcon}
+										alt="PDF"
+										className="w-8 h-8"
+									/>
 								</a>
-							) : (
-								<a></a>
-							)}
+							) : null}
 						</div>
-					);
-				})}
-			</div>
-			<div className="flex justify-center items-baseline ">
-				<button
-					className="w-full h-14 bg-quatery text-secondary font-semibold"
-					onClick={() => setOpenMediaDialog(false)}
-				>
-					Close
-				</button>
-			</div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 };

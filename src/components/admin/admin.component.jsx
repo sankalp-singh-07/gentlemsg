@@ -15,7 +15,7 @@ const Admin = () => {
 	const {
 		openFriendsDialog,
 		openNotifsDialog,
-		openMediaDialog,
+		// openMediaDialog,
 		openProfileDialog,
 		setOpenFriendsDialog,
 		setOpenNotifsDialog,
@@ -23,7 +23,7 @@ const Admin = () => {
 	} = useContext(DialogContext);
 	const friendsDialogRef = useRef();
 	const notifsDialogRef = useRef();
-	const mediaDialogRef = useRef();
+	// const mediaDialogRef = useRef();
 	const profileDialogRef = useRef();
 	const dispatch = useDispatch();
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -94,7 +94,7 @@ const Admin = () => {
 			<div ref={profileDialogRef}>
 				{openProfileDialog && <UpdateProfile />}
 			</div>
-			<div ref={mediaDialogRef}>{openMediaDialog && <Media />}</div>
+			{/* <div ref={mediaDialogRef}>{openMediaDialog && <Media />}</div> */}
 		</div>
 	);
 };

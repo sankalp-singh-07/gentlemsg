@@ -6,63 +6,64 @@ import { useSelector } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import UnblockUser from '../../friends/unblockUser.component';
-import menuDark from '../../../assets/dots1.png';
-import menuLight from '../../../assets/dots.png';
-import { DarkModeContext } from '../../../context/dark.context';
 import dots1 from '../../../assets/dots1.png';
 import dots2 from '../../../assets/dots.png';
+import { DarkModeContext } from '../../../context/dark.context';
 
 const ChatsDialog = () => {
 	const [openChatsDialog, setOpenChatsDialog] = useState(false);
 	const { chatId } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
+	const { blocked } = useSelector(friendSelector);
+	const { setOpenMediaDialog } = useContext(DialogContext);
+	const { isDark } = useContext(DarkModeContext);
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [isUserBlockOther, setIsUserBlockOther] = useState(false);
 	const [blockAction, setBlockAction] = useState(null);
 
-	const { blocked } = useSelector(friendSelector);
-
-	const { isDark } = useContext(DarkModeContext);
+	const menuRef = useRef(null);
 
 	useEffect(() => {
-		const data = blocked[chatId];
-		if (data) {
-			setIsUserBlocked(true);
-			if (data.blockedBy === currentUser.id) setIsUserBlockOther(true);
-		} else {
-			setIsUserBlocked(false);
-			setIsUserBlockOther(false);
+		if (blocked && chatId) {
+			const data = blocked[chatId];
+			if (data) {
+				setIsUserBlocked(true);
+				if (data.blockedBy === currentUser.id)
+					setIsUserBlockOther(true);
+			} else {
+				setIsUserBlocked(false);
+				setIsUserBlockOther(false);
+			}
 		}
 	}, [blocked, chatId, currentUser.id]);
 
-	const menuRef = useRef(null);
-
-	const { setOpenMediaDialog } = useContext(DialogContext);
-
 	useEffect(() => {
-		const handleClick = (e) => {
-			if (menuRef.current !== e.target) setOpenChatsDialog(false);
+		const handleClickOutside = (e) => {
+			if (menuRef.current && !menuRef.current.contains(e.target)) {
+				setOpenChatsDialog(false);
+			}
 		};
-
-		window.addEventListener('click', handleClick);
-
+		document.addEventListener('mousedown', handleClickOutside);
 		return () => {
-			window.removeEventListener('click', handleClick);
+			document.removeEventListener('mousedown', handleClickOutside);
 		};
-	});
+	}, []);
 
-	const handleBlockUserId = (chatId) => {
+	const handleBlockUser = () => {
 		setBlockAction(isUserBlocked && isUserBlockOther ? 'unblock' : 'block');
 	};
 
 	return (
-		<>
+		<div className="relative">
 			{openChatsDialog && (
-				<div className="flex flex-col absolute top-20 bottom-8 right-6 text-start border-2 px-4 py-4 rounded-md bg-tertiary h-fit text-black">
+				<div
+					className="absolute top-16 right-4 bg-tertiary border-2 rounded-md shadow-md px-4 py-3 text-black text-left"
+					ref={menuRef}
+				>
 					<ul className="flex flex-col gap-3">
 						<li
-							className="hover:bg-quatery pr-12 pl-4 py-3 rounded-md cursor-pointer"
+							className="hover:bg-quatery px-4 py-2 rounded cursor-pointer"
 							onClick={() => setOpenMediaDialog(true)}
 						>
 							Media
@@ -70,8 +71,8 @@ const ChatsDialog = () => {
 						{(isUserBlocked && isUserBlockOther) ||
 						!isUserBlocked ? (
 							<li
-								className="hover:bg-red-600 hover:text-white pr-12 pl-4 py-3 rounded-md cursor-pointer"
-								onClick={() => handleBlockUserId(chatId)}
+								className="hover:bg-red-600 hover:text-white px-4 py-2 rounded cursor-pointer"
+								onClick={handleBlockUser}
 							>
 								{isUserBlocked && isUserBlockOther
 									? 'Unblock'
@@ -82,27 +83,16 @@ const ChatsDialog = () => {
 				</div>
 			)}
 
-			{isDark ? (
-				<img
-					src={dots1}
-					alt="menu"
-					className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4 cursor-pointer"
-					onClick={() => setOpenChatsDialog(!openChatsDialog)}
-					ref={menuRef}
-				/>
-			) : (
-				<img
-					src={dots2}
-					alt="menu"
-					className="w-5 h-5 mr-3 sm:w-6 sm:h-6 sm:mr-4 cursor-pointer"
-					onClick={() => setOpenChatsDialog(!openChatsDialog)}
-					ref={menuRef}
-				/>
-			)}
+			<img
+				src={isDark ? dots1 : dots2}
+				alt="menu"
+				className="cursor-pointer w-6 h-6"
+				onClick={() => setOpenChatsDialog(!openChatsDialog)}
+			/>
 
 			{blockAction === 'block' && <BlockUser chatId={chatId} />}
 			{blockAction === 'unblock' && <UnblockUser chatId={chatId} />}
-		</>
+		</div>
 	);
 };
 

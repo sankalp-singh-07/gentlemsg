@@ -23,6 +23,8 @@ import folderL from '../../assets/folderL.png';
 import folderD from '../../assets/folderD.png';
 import sendL from '../../assets/sendL.png';
 import sendD from '../../assets/sendD.png';
+import { DialogContext } from '../../context/dialog.context';
+import Media from './childComponents/media.component';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -122,6 +124,8 @@ const Chat = ({ inMobile }) => {
 	const handeleUpload = () => fileInputRef.current.click();
 	const handleFileUpload = (e) => setFiles(Array.from(e.target.files));
 
+	const { openMediaDialog } = useContext(DialogContext);
+
 	return (
 		<div
 			className={`chat ${
@@ -185,6 +189,7 @@ const Chat = ({ inMobile }) => {
 					/> */}
 					<ChatsDialog />
 				</div>
+				{openMediaDialog && <Media />}
 			</div>
 			<div className="middle scrollbar-hide">
 				<Messages receiverImg={receiverData.photoURL} />
