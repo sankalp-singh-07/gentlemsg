@@ -4,7 +4,7 @@ import Messages from './childComponents/messages.component';
 import EmojiPicker from 'emoji-picker-react';
 import { MessageContext } from '../../context/message.context';
 import { useContext } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useLocation } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../utils/firebase';
@@ -25,7 +25,6 @@ import sendL from '../../assets/sendL.png';
 import sendD from '../../assets/sendD.png';
 import { DialogContext } from '../../context/dialog.context';
 import Media from './childComponents/media.component';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
