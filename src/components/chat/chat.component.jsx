@@ -25,6 +25,7 @@ import sendL from '../../assets/sendL.png';
 import sendD from '../../assets/sendD.png';
 import { DialogContext } from '../../context/dialog.context';
 import Media from './childComponents/media.component';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -39,9 +40,16 @@ const Chat = ({ inMobile }) => {
 
 	const fileInputRef = useRef(null);
 	const [files, setFiles] = useState([]);
-	const navigate = useNavigate();
-
 	const { isDark } = useContext(DarkModeContext);
+
+	const navigate = useNavigate();
+	const location = useLocation();
+
+	useEffect(() => {
+		if (location.pathname === '/chat') {
+			navigate('/admin');
+		}
+	}, [location, navigate]);
 
 	useEffect(() => {
 		if (!blocked || !chatId || !currentUser) return;
