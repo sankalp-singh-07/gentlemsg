@@ -12,6 +12,7 @@
   "dependencies": {
     "@formspree/react": "^2.5.1",
     "@reduxjs/toolkit": "^2.2.5",
+    "@shadcn/ui": "^0.0.4",
     "axios": "^1.7.2",
     "crypto-js": "^4.2.0",
     "emoji-picker-react": "^4.11.1",
