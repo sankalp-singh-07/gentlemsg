@@ -45,10 +45,12 @@ const Chat = ({ inMobile }) => {
 	const location = useLocation();
 
 	useEffect(() => {
-		if (location.pathname === '/chat') {
+		const isPageReload =
+			performance.getEntriesByType('navigation')[0]?.type === 'reload';
+		if (location.pathname === '/chat' && isPageReload) {
 			navigate('/admin');
 		}
-	}, [location, navigate]);
+	}, [location.pathname, navigate]);
 
 	useEffect(() => {
 		if (!blocked || !chatId || !currentUser) return;
