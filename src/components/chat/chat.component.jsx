@@ -44,13 +44,13 @@ const Chat = ({ inMobile }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	useEffect(() => {
-		const isPageReload =
-			performance.getEntriesByType('navigation')[0]?.type === 'reload';
-		if (location.pathname === '/chat' && isPageReload) {
-			navigate('/admin');
-		}
-	}, [location.pathname, navigate]);
+	// useEffect(() => {
+	// 	const isPageReload =
+	// 		performance.getEntriesByType('navigation')[0]?.type === 'reload';
+	// 	if (location.pathname === '/chat' && isPageReload) {
+	// 		navigate('/admin');
+	// 	}
+	// }, [location.pathname, navigate]);
 
 	useEffect(() => {
 		if (!blocked || !chatId || !currentUser) return;
