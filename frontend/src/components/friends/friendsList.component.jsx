@@ -1,63 +1,22 @@
 import { useSelector } from 'react-redux';
 import { friendSelector } from '../../store/friends/friends.selector';
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../utils/firebase';
 import { useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
 import { DialogContext } from '../../context/dialog.context';
 import { MessageContext } from '../../context/message.context';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import { generateChatId } from '../messages/userChat';
+import { generateChatId } from '../messages/sendMessage';
 
 const FriendsList = () => {
-	const { friends, blocked } = useSelector(friendSelector);
+	const { friends } = useSelector(friendSelector);
 	const { currentUser } = useSelector(selectCurrentUser);
-	const [users, setUsers] = useState([]);
-	const [myFriends, setMyFriends] = useState([]);
-	const [loading, setLoading] = useState(true);
 
 	const navigate = useNavigate();
-
 	const { setOpenFriendsDialog } = useContext(DialogContext);
 	const { setChatId } = useContext(MessageContext);
 
-	const fetchFriendsData = async (id) => {
-		const ref = doc(db, 'users', id);
-		const docSnap = await getDoc(ref);
-
-		if (docSnap.exists()) {
-			const { userName, photoURL, name, email } = docSnap.data();
-			return { id, userName, photoURL, name, email };
-		}
-	};
-
-	useEffect(() => {
-		setUsers(friends.filter((id) => !users.includes(id)));
-	}, [friends]);
-
-	useEffect(() => {
-		const fetchFriends = async () => {
-			const friendsData = await Promise.all(
-				users.map((id) => fetchFriendsData(id))
-			);
-			setMyFriends(friendsData.filter((friend) => friend !== null));
-			setLoading(false);
-		};
-		if (users.length) {
-			fetchFriends();
-		}
-	}, [users]);
-
-	if (loading) {
-		setTimeout(() => {
-			setLoading(false);
-		}, 15000);
-		return <h1>Loading...</h1>;
-	}
-
-	const handleGoToProfile = (e) => {
-		const chatId = generateChatId(currentUser.id, e.id);
+	const handleGoToProfile = (friend) => {
+		const chatId = generateChatId(currentUser.id, friend.id);
 		setChatId(chatId);
 		const currentWidth = window.innerWidth;
 		if (currentWidth <= 600) {
@@ -66,11 +25,15 @@ const FriendsList = () => {
 		setOpenFriendsDialog(false);
 	};
 
+	if (!friends || friends.length === 0) {
+		return <p className="text-center p-4 text-gray-500">No friends yet</p>;
+	}
+
 	return (
 		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll scrollbar-hide">
-			{myFriends.map((friend, index) => (
+			{friends.map((friend, index) => (
 				<div
-					key={index}
+					key={friend.id || index}
 					className="flex bg-quatery p-4 rounded shadow-md items-center justify-between"
 				>
 					<div className="flex items-center gap-2 md:gap-3">

@@ -7,10 +7,10 @@ import {
 } from '../thunks/thunks';
 
 const INITIAL_STATE = {
-	friends: [],
-	requests: [],
-	blocked: {},
-	notifs: [],
+	friends: [],    // Array of friend profile objects
+	requests: [],   // Array of request objects with sender/receiver profiles
+	blocked: {},    // Map of chatId -> { blockedUser, blockedBy }
+	notifs: [],     // Array of notification objects with sender profiles
 	status: 'idle',
 	error: null,
 };
@@ -42,19 +42,26 @@ const friendDataSlice = createSlice({
 			})
 			.addCase(sendRequests.fulfilled, (state, action) => {
 				state.status = 'success';
-				state.requests.push(action.payload.ref);
+				// API returns the full request object
+				state.requests.push(action.payload);
 			})
 			.addCase(sendRequests.rejected, (state, action) => {
 				state.status = 'failed';
 				state.error = action.error.message;
-				console.log('Failed to send request:', action);
 			})
 			.addCase(acceptRequest.fulfilled, (state, action) => {
-				state.friends.push(action.payload.senderId);
-				state.requests = action.payload.userRequestsUpdate;
+				// Remove the accepted request and add to friends
+				state.requests = state.requests.filter(
+					(req) => !(req.senderId === action.payload.senderId)
+				);
+				// Add friend (will be refreshed on next getInitialData)
+				state.friends.push({ id: action.payload.senderId });
 			})
 			.addCase(rejectRequest.fulfilled, (state, action) => {
-				state.requests = action.payload.userRequestsUpdate;
+				// Remove the rejected request
+				state.requests = state.requests.filter(
+					(req) => !(req.senderId === action.payload.senderId)
+				);
 			});
 	},
 });

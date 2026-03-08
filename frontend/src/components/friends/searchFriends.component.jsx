@@ -1,7 +1,6 @@
 import { useState, useContext } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../utils/firebase';
 import { FriendContext } from '../../context/friend.context';
+import * as userService from '../../services/userService';
 import { sendRequests } from '../../store/thunks/thunks';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
@@ -20,17 +19,25 @@ const SearchFriends = () => {
 
 		if (username === '' || username === currentUser.userName) return;
 
-		const usersRef = collection(db, 'users');
-		const q = query(usersRef, where('userName', '==', username));
-
-		const querySnapshot = await getDocs(q);
-
-		const users = querySnapshot.docs.map((doc) => ({
-			uid: doc.id,
-			...doc.data(),
-		}));
-
-		setUsers(users);
+		try {
+			const result = await userService.searchUsers(username);
+			// API returns array of user objects or a single object
+			const usersArr = Array.isArray(result) ? result : [result];
+			setUsers(
+				usersArr
+					.filter((u) => u && u.id)
+					.map((u) => ({
+						uid: u.uid || u.id,
+						name: u.name,
+						email: u.email,
+						photoURL: u.photoURL,
+						userName: u.userName,
+					}))
+			);
+		} catch (error) {
+			console.error('Search error:', error);
+			setUsers([]);
+		}
 	};
 
 	const handleRequest = (user) => {
@@ -66,7 +73,7 @@ const SearchFriends = () => {
 					return (
 						<div
 							className="flex mt-5 items-center justify-between"
-							key={user.id}
+							key={user.uid}
 						>
 							<div className="flex gap-3 items-center">
 								<img

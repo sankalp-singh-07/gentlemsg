@@ -1,0 +1,16 @@
+protobuf>=4.25.0
+pydantic
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+sqlalchemy[asyncio]==2.0.35
+aiosqlite==0.20.0
+python-jose[cryptography]==3.3.0
+google-auth==2.35.0
+python-multipart==0.0.12
+aiofiles==24.1.0
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+requests==2.32.3
+slowapi==0.1.9
+alembic==1.13.1
+better-profanity

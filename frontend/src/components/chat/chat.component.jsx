@@ -6,9 +6,10 @@ import { MessageContext } from '../../context/message.context';
 import { useContext } from 'react';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../utils/firebase';
-import { sendMessage } from '../messages/sendMessage';
+import * as chatService from '../../services/chatService';
+import * as userService from '../../services/userService';
+import { connectChat } from '../../services/websocket';
+import { encryptMessage, generateKey } from '../../utils/encryption';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ChatsDialog from './childComponents/chatsDialog.component';
 import SendMedia from '../messages/sendMedia';
@@ -28,7 +29,7 @@ import Media from './childComponents/media.component';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-	const [receiverData, setReceiverData] = useState([]);
+	const [receiverData, setReceiverData] = useState({});
 
 	const { chatId, setMessages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -44,14 +45,7 @@ const Chat = ({ inMobile }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	// useEffect(() => {
-	// 	const isPageReload =
-	// 		performance.getEntriesByType('navigation')[0]?.type === 'reload';
-	// 	if (location.pathname === '/chat' && isPageReload) {
-	// 		navigate('/admin');
-	// 	}
-	// }, [location.pathname, navigate]);
-
+	// Check blocked status
 	useEffect(() => {
 		if (!blocked || !chatId || !currentUser) return;
 
@@ -73,35 +67,78 @@ const Chat = ({ inMobile }) => {
 		if (blockedStatus) setText('');
 	}, [blocked, chatId, currentUser]);
 
+	// Fetch receiver data from API
 	useEffect(() => {
-		if (!currentUser) {
-			navigate('/admin');
-			return;
-		}
+		if (!currentUser || !chatId) return;
 
 		const receiverId = chatId
 			.split('-')
 			.filter((el) => el !== currentUser.id)[0];
 		if (!receiverId) return;
 
-		const receiverRef = doc(db, 'users', receiverId);
-		const unsubscribe = onSnapshot(receiverRef, (doc) => {
-			setReceiverData(doc.data());
-		});
+		const fetchReceiver = async () => {
+			try {
+				const data = await userService.getUser(receiverId);
+				setReceiverData({
+					id: data.id,
+					userName: data.userName,
+					photoURL: data.photoURL,
+					isOnline: data.isOnline,
+					name: data.name,
+					email: data.email,
+				});
+			} catch (error) {
+				console.error('Error fetching receiver:', error);
+			}
+		};
 
-		return () => unsubscribe();
-	}, [chatId, currentUser, navigate]);
+		fetchReceiver();
+	}, [chatId, currentUser]);
 
+	// Fetch messages from API + connect WebSocket for real-time
 	useEffect(() => {
 		if (!chatId) return;
 
-		const chatsRef = doc(db, 'chats', chatId);
-		const unsub = onSnapshot(chatsRef, (doc) => {
-			setMessages(doc.data());
-		});
+		let ws = null;
 
-		return () => unsub();
-	}, [chatId]);
+		const fetchAndConnect = async () => {
+			try {
+				// Fetch existing messages
+				const data = await chatService.getMessages(chatId);
+				setMessages({ messages: data.messages || [] });
+
+				// Mark chat as read
+				await chatService.markAsRead(chatId);
+
+				// Connect WebSocket for real-time new messages
+				ws = connectChat(chatId, (event) => {
+					if (event.event === 'new_message') {
+						setMessages((prev) => ({
+							messages: [
+								...(prev?.messages || []),
+								{
+									senderId: event.senderId,
+									message: event.message,
+									type: event.type,
+									sentAt: event.sentAt,
+								},
+							],
+						}));
+					}
+				});
+			} catch (error) {
+				console.error('Error fetching messages:', error);
+			}
+		};
+
+		fetchAndConnect();
+
+		return () => {
+			if (ws && ws.readyState === WebSocket.OPEN) {
+				ws.close();
+			}
+		};
+	}, [chatId, setMessages]);
 
 	const [text, setText] = useState('');
 	const textBoxRef = useRef(null);
@@ -121,8 +158,13 @@ const Chat = ({ inMobile }) => {
 	const handleSend = async () => {
 		if (text.trim() === '' || isUserBlocked) return;
 
-		await sendMessage(currentUser, receiverData.id, text, 'text');
-		setText('');
+		try {
+			// Removed insecure frontend encryption. Messages are now secured in transit via HTTPS/WSS
+			await chatService.sendMessage(chatId, text, 'text');
+			setText('');
+		} catch (error) {
+			console.error('Error sending message:', error);
+		}
 	};
 
 	const handleEnterSend = (e) => {
@@ -191,11 +233,6 @@ const Chat = ({ inMobile }) => {
 					</div>
 				</div>
 				<div className="icons">
-					{/* <img
-						src="src/assets/video.png"
-						alt="video"
-						className="w-6 h-6 mr-4 sm:w-8 sm:h-8 sm:mr-6"
-					/> */}
 					<ChatsDialog />
 				</div>
 				{openMediaDialog && <Media />}

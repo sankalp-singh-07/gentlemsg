@@ -1,23 +1,10 @@
-import { auth, db } from '../../../utils/firebase';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import { removeCookie } from '../../../utils/cookies';
+import { logout } from '../../../services/authService';
 
 const SignOutHandler = async () => {
 	try {
-		const user = auth.currentUser;
-		if (user) {
-			const userRef = doc(db, 'users', user.uid);
-			await updateDoc(userRef, {
-				isOnline: false,
-				lastActive: serverTimestamp(),
-			});
-		}
-
-		await signOut(auth);
-		removeCookie();
+		await logout(); // Calls backend + clears localStorage
 	} catch (error) {
-		console.error('Sign Out Error', error);
+		console.error('Sign Out Error:', error);
 	}
 };
 

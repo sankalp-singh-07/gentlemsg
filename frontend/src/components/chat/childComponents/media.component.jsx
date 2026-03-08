@@ -1,36 +1,35 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
 import { MessageContext } from '../../../context/message.context';
-import { getDownloadURL, getMetadata, listAll, ref } from 'firebase/storage';
-import { storage } from '../../../utils/firebase';
+import * as chatService from '../../../services/chatService';
 import pdfIcon from '../../../assets/pdf-file.png';
 
 const Media = () => {
 	const { chatId } = useContext(MessageContext);
 	const { setOpenMediaDialog } = useContext(DialogContext);
 	const [mediaData, setMediaData] = useState([]);
-	const [isLoading, setIsLoading] = useState(true); // Loading state
+	const [isLoading, setIsLoading] = useState(true);
 	const dialogRef = useRef(null);
 
 	useEffect(() => {
 		const fetchFiles = async () => {
-			setIsLoading(true); // Start loading
-			const listRef = ref(storage, `chats/${chatId}`);
+			setIsLoading(true);
 
 			try {
-				const res = await listAll(listRef);
-				const data = await Promise.all(
-					res.items.map(async (itemRef) => {
-						const url = await getDownloadURL(itemRef);
-						const metadata = await getMetadata(itemRef);
-						return { url, contentType: metadata.contentType };
-					})
+				const data = await chatService.getMedia(chatId);
+				// API returns array of { url, content_type, filename }
+				setMediaData(
+					Array.isArray(data)
+						? data.map((item) => ({
+								url: item.url,
+								contentType: item.content_type || '',
+						  }))
+						: []
 				);
-				setMediaData(data);
 			} catch (error) {
 				console.error('Error fetching media files', error);
 			} finally {
-				setIsLoading(false); // End loading
+				setIsLoading(false);
 			}
 		};
 

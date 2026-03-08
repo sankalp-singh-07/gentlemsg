@@ -1,62 +1,70 @@
-import { auth, googleProvider, db } from '../../../utils/firebase';
-import { signInWithPopup } from 'firebase/auth';
-import {
-	setDoc,
-	doc,
-	serverTimestamp,
-	getDoc,
-	updateDoc,
-	writeBatch,
-} from 'firebase/firestore';
-import { setCookie } from '../../../utils/cookies';
+import { googleLogin, setToken } from '../../../services/authService';
 
 const SignInHandler = async () => {
-	const userNameCreate = (name) => name.split(' ')[0].toLowerCase();
-
 	try {
-		const result = await signInWithPopup(auth, googleProvider);
-		const user = result.user;
+		// Use Google Identity Services to get ID token
+		const idToken = await new Promise((resolve, reject) => {
+			/* global google */
+			google.accounts.id.initialize({
+				client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+				callback: (response) => {
+					if (response.credential) {
+						resolve(response.credential);
+					} else {
+						reject(new Error('No credential received'));
+					}
+				},
+			});
 
-		if (user) {
-			const token = await user.getIdToken();
-			setCookie(token);
+			// Use the One Tap prompt or fallback to button flow
+			google.accounts.id.prompt((notification) => {
+				if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+					// Fallback: use renderButton approach on the sign-in page
+					// This is handled by the sign-in component rendering the button
+					reject(new Error('Google prompt not displayed'));
+				}
+			});
+		});
 
-			const userRef = doc(db, 'users', user.uid);
-			const userSnapshot = await getDoc(userRef);
-			if (userSnapshot.exists()) {
-				await updateDoc(userRef, {
-					isOnline: true,
-					lastActive: serverTimestamp(),
-				});
-			} else {
-				const batch = writeBatch(db);
-
-				batch.set(userRef, {
-					id: user.uid,
-					name: user.displayName,
-					email: user.email,
-					photoURL: user.photoURL,
-					lastActive: serverTimestamp(),
-					isOnline: true,
-					friends: [],
-					blocked: {},
-					requests: [],
-					notifs: [],
-					userName: userNameCreate(user.displayName),
-				});
-
-				const userChatsRef = doc(db, 'userChats', user.uid);
-
-				batch.set(userChatsRef, {
-					chats: [],
-				});
-
-				await batch.commit();
-			}
-		}
+		// Send Google ID token to backend → receive JWT
+		const user = await googleLogin(idToken);
+		return user;
 	} catch (error) {
-		console.error('Error signing in with Google.', error);
+		console.error('Error signing in with Google:', error);
+		throw error;
 	}
 };
 
 export default SignInHandler;
+
+/**
+ * Render the Google Sign-In button into a container element.
+ * Call this from a component's useEffect to render the button.
+ */
+export const renderGoogleButton = (containerId, onSuccess) => {
+	/* global google */
+	if (typeof google === 'undefined') return;
+
+	google.accounts.id.initialize({
+		client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+		callback: async (response) => {
+			if (response.credential) {
+				try {
+					const user = await googleLogin(response.credential);
+					if (onSuccess) onSuccess(user);
+				} catch (error) {
+					console.error('Google login failed:', error);
+				}
+			}
+		},
+	});
+
+	google.accounts.id.renderButton(document.getElementById(containerId), {
+		theme: 'outline',
+		size: 'large',
+		type: 'standard',
+		text: 'signin_with',
+		shape: 'rectangular',
+		width: 300,
+	});
+};

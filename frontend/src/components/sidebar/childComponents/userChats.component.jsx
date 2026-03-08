@@ -4,9 +4,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectChats } from '../../../store/chats/chats.selector';
 import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
-
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebase';
 import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
 import { decryptMessage, generateKey } from '../../../utils/encryption';
@@ -14,13 +11,8 @@ import { decryptMessage, generateKey } from '../../../utils/encryption';
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
 	const { currentUser } = useSelector(selectCurrentUser);
-
-	const [userData, setUserData] = useState([]);
-
 	const userId = currentUser.id;
-
 	const dispatch = useDispatch();
-
 	const { setChatId } = useContext(MessageContext);
 
 	useEffect(() => {
@@ -31,76 +23,35 @@ const UserChats = () => {
 
 	const handleClick = (chatId) => {
 		const currentWidth = window.innerWidth;
-
 		setChatId(chatId);
-
 		if (currentWidth <= 600) {
 			navigate('/chat');
 		}
 	};
 
-	useEffect(() => {
-		const fetchData = async (userId) => {
-			const userRef = doc(db, 'users', userId);
-			const userSnap = await getDoc(userRef);
-			if (userSnap.exists()) {
-				return { id: userId, ...userSnap.data() };
-			}
-			return null;
-		};
-
-		const fetchUsersData = async () => {
-			const userDataArray = await Promise.all(
-				chats.map(async (chat) => {
-					const otherUserId =
-						chat.receiverId === userId
-							? chat?.senderId
-							: chat.receiverId;
-					return await fetchData(otherUserId);
-				})
-			);
-			setUserData(userDataArray.filter((user) => user !== null));
-		};
-
-		if (chats.length) {
-			fetchUsersData();
-		}
-	}, [chats, userId]);
-
 	const getDate = (timeStamp) => {
+		if (!timeStamp) return '';
 		const date = new Date(timeStamp);
 		const options = { day: 'numeric', month: 'short' };
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
 	const showLatestMessage = (message, chatId, type) => {
-		const userIds = chatId.split('-');
-		let displayMessage = '';
-
-		const encryptionKey = generateKey(userIds[0], userIds[1]);
+		if (!message) return 'Start Conversation';
 
 		if (type === 'text') {
+			// Try to decrypt
+			const userIds = chatId.split('-');
+			const encryptionKey = generateKey(userIds[0], userIds[1]);
 			const decryptedMessage = decryptMessage(message, encryptionKey);
-			if (!decryptedMessage) {
-				console.error(`Failed to decrypt message: ${message}`);
-				displayMessage = 'Error decrypting message';
-			} else {
-				displayMessage =
-					decryptedMessage.length > 17
-						? `${decryptedMessage.slice(0, 17)}...`
-						: decryptedMessage;
-			}
-		} else if (type === 'image') {
-			displayMessage = '[Image]';
-		} else if (type === 'document') {
-			displayMessage = '[Document]';
-		} else if (type === 'video') {
-			displayMessage = '[Video]';
-		} else {
-			displayMessage = 'Start Conversation';
-		}
-
-		return displayMessage;
+			if (!decryptedMessage) return message?.length > 17 ? `${message.slice(0, 17)}...` : message;
+			return decryptedMessage.length > 17
+				? `${decryptedMessage.slice(0, 17)}...`
+				: decryptedMessage;
+		} else if (type === 'image') return '[Image]';
+		else if (type === 'document') return '[Document]';
+		else if (type === 'video') return '[Video]';
+		else return 'Start Conversation';
 	};
 
 	const sortedChats = [...chats].sort((a, b) => {
@@ -113,12 +64,7 @@ const UserChats = () => {
 	return (
 		<>
 			{sortedChats.map((chat) => {
-				const otherUserId =
-					chat.receiverId === userId
-						? chat?.senderId
-						: chat.receiverId;
-				const user = userData.find((user) => user.id === otherUserId);
-
+				// Backend already provides receiver data in the chat list
 				return (
 					<div
 						className="py-2"
@@ -131,9 +77,9 @@ const UserChats = () => {
 							}`}
 						>
 							<div className="userChatImg">
-								{user ? (
+								{chat.receiverPhotoURL ? (
 									<img
-										src={user.photoURL}
+										src={chat.receiverPhotoURL}
 										alt="..."
 										className="avatar"
 									/>
@@ -143,17 +89,15 @@ const UserChats = () => {
 							</div>
 							<div className="userChatInfo">
 								<div className="userName">
-									{user ? <h1>{user.name}</h1> : <h1>...</h1>}
+									<h1>{chat.receiverName || '...'}</h1>
 								</div>
 								<div className="userMessage">
 									<p>
-										{user
-											? showLatestMessage(
-													chat.lastMessage,
-													chat.chatId,
-													chat.type
-											  )
-											: '...'}
+										{showLatestMessage(
+											chat.lastMessage,
+											chat.chatId,
+											chat.type
+										)}
 									</p>
 								</div>
 							</div>
@@ -161,7 +105,6 @@ const UserChats = () => {
 								<div className="text-xs">
 									{getDate(chat.sentAt)}
 								</div>
-								{/* <div className="userChatNotif">5</div> */}
 							</div>
 						</div>
 					</div>

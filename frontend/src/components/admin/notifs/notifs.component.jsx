@@ -1,37 +1,15 @@
 import { useSelector } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
-import { useContext, useEffect } from 'react';
+import { useContext } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
 import { useState } from 'react';
-import { arrayRemove, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../utils/firebase';
+import * as notificationService from '../../../services/notificationService';
 import './notifs.styles.css';
 
 const Notifs = () => {
 	const { notifs } = useSelector(friendSelector);
 	const { setOpenNotifsDialog } = useContext(DialogContext);
-	const [notifications, setNotifications] = useState([]);
-
-	useEffect(() => {
-		const fetchNotifications = async () => {
-			const newNotifications = await Promise.all(
-				notifs.map(async (notif) => {
-					const { from: senderId } = notif;
-					const senderRef = doc(db, 'users', senderId);
-					const senderSnap = await getDoc(senderRef);
-
-					if (senderSnap.exists()) {
-						const { userName, email, photoURL } = senderSnap.data();
-						return { userName, email, photoURL, ...notif };
-					}
-					return null;
-				})
-			);
-			setNotifications(newNotifications.filter(Boolean));
-		};
-
-		fetchNotifications();
-	}, [notifs]);
+	const [notifications, setNotifications] = useState(notifs);
 
 	const messageGen = (notif) => {
 		if (notif.type === 'accepted') {
@@ -39,35 +17,26 @@ const Notifs = () => {
 		} else if (notif.type === 'rejected') {
 			return `${notif.userName} rejected your friend request`;
 		}
+		return '';
 	};
 
 	const getDate = (timeStamp) => {
+		if (!timeStamp) return '';
 		const date = new Date(timeStamp);
 		const options = { day: 'numeric', month: 'short' };
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
 	const handleDelete = async (notif) => {
-		const newNotifs = notifications.filter(
-			(n) => n.createdAt !== notif.createdAt
-		);
-		setNotifications(newNotifs);
-
-		const userRef = doc(db, 'users', notif.to);
-
-		const notifToRemove = notifs.find(
-			(notification) =>
-				notification.createdAt === notif.createdAt &&
-				notification.from === notif.from &&
-				notification.to === notif.to
+		// Remove from local state immediately
+		setNotifications((prev) =>
+			prev.filter((n) => n.id !== notif.id)
 		);
 
 		try {
-			await updateDoc(userRef, {
-				notifs: arrayRemove(notifToRemove),
-			});
+			await notificationService.deleteNotification(notif.id);
 		} catch (error) {
-			console.error('Error:', error);
+			console.error('Error deleting notification:', error);
 		}
 	};
 
@@ -79,7 +48,7 @@ const Notifs = () => {
 			>
 				{notifications.map((notif, index) => (
 					<div
-						key={index}
+						key={notif.id || index}
 						className="flex bg-tertiary px-4 py-2 justify-between items-center gap-2 rounded-md w-full h-fit"
 					>
 						<div className="flex justify-self-start items-center gap-3 min-w-36 mr-3">

@@ -1,39 +1,24 @@
+import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import { useEffect } from 'react';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../../utils/firebase';
+import { connectPresence } from '../../services/websocket';
 
 const Status = () => {
 	const { currentUser } = useSelector(selectCurrentUser);
+
 	useEffect(() => {
-		if (currentUser) {
-			const userRef = doc(db, 'users', currentUser.id);
+		if (!currentUser) return;
 
-			const setOffline = async () => {
-				await updateDoc(userRef, {
-					isOnline: false,
-					lastActive: serverTimestamp(),
-				});
-			};
+		// Connect to presence WebSocket — backend auto-handles online/offline
+		const ws = connectPresence(currentUser.id, (event) => {
+			console.log('[Status Event]', event);
+		});
 
-			const setOnline = async () => {
-				await updateDoc(userRef, {
-					isOnline: true,
-					lastActive: serverTimestamp(),
-				});
-			};
-
-			setOnline();
-
-			window.addEventListener('beforeunload', setOffline);
-			window.addEventListener('unload', setOffline);
-
-			return () => {
-				window.removeEventListener('beforeunload', setOffline);
-				window.removeEventListener('unload', setOffline);
-			};
-		}
+		return () => {
+			if (ws && ws._cleanup) {
+				ws._cleanup();
+			}
+		};
 	}, [currentUser]);
 
 	return null;

@@ -1,8 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { MessageContext } from '../../context/message.context';
-import { storage, db } from '../../utils/firebase';
-import { ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
-import { sendMessage } from './sendMessage';
+import * as chatService from '../../services/chatService';
 
 const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 	const [filesArr, setFilesArr] = useState([]);
@@ -14,51 +12,30 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 
 	const { chatId } = useContext(MessageContext);
 
-	const uploadFile = async (file) => {
+	const send = async () => {
 		if (isUserBlocked) {
 			console.log("User Blocked. Can't upload file");
 			return;
 		}
-		const storageRef = ref(
-			storage,
-			`chats/${chatId}/${Date.now()}_${file.name}`
-		);
-		const uploadTask = uploadBytesResumable(storageRef, file);
 
-		return new Promise((resolve, reject) => {
-			uploadTask.on(
-				'state_changed',
-				(snapshot) => {},
-				(error) => {
-					console.log(error);
-					reject(error);
-				},
-				async () => {
-					const downloadURL = await getDownloadURL(
-						uploadTask.snapshot.ref
-					);
-					resolve({
-						url: downloadURL,
-						type: file.type.includes('image')
-							? 'image'
-							: file.type.includes('video')
-							? 'video'
-							: file.type.includes('pdf')
-							? 'document'
-							: 'unknown',
-					});
-				}
-			);
-		});
-	};
+		const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+		const oversized = filesArr.filter(f => f.size > MAX_FILE_SIZE);
+		if (oversized.length > 0) {
+			alert('One or more files are too large. Maximum size is 25MB.');
+			setSending('Send');
+			return;
+		}
 
-	const send = async () => {
 		setSending('Sending...');
-		const uploadedFiles = await Promise.all(filesArr.map(uploadFile));
 
-		uploadedFiles.forEach(({ url, type }) => {
-			sendMessage(currentUser, receiverData.id, [url], type);
-		});
+		try {
+			// Upload each file via the backend API
+			for (const file of filesArr) {
+				await chatService.uploadMedia(chatId, file);
+			}
+		} catch (error) {
+			console.error('Error uploading media:', error);
+		}
 
 		setFilesArr([]);
 		setSending('Send');

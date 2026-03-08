@@ -1,0 +1,225 @@
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
+from core.security import get_current_user
+from core.limiter import limiter
+from schemas.chat import ChatCreate
+from schemas.message import MessageCreate
+from services.chat_service import (
+    get_or_create_chat,
+    get_user_chats,
+    get_messages,
+    send_message,
+    upload_media,
+    get_chat_media,
+    mark_chat_read,
+    verify_chat_participant,
+)
+from websocket.manager import manager
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/chats", tags=["chats"])
+
+
+@router.get("/")
+async def list_chats(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get current user's chat list with last messages and receiver profiles."""
+    return await get_user_chats(current_user["id"], db)
+
+
+@router.post("/")
+async def create_chat(
+    body: ChatCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a chat between current user and receiver."""
+    from services.user_service import get_user_by_id
+    receiver = await get_user_by_id(body.receiver_id, db)
+    if not receiver:
+        raise HTTPException(status_code=404, detail="Receiver not found")
+
+    chat = await get_or_create_chat(current_user["id"], body.receiver_id, db)
+    return {
+        "id": chat.id,
+        "user1_id": chat.user1_id,
+        "user2_id": chat.user2_id,
+    }
+
+
+@router.get("/{chat_id}/messages")
+async def list_messages(
+    chat_id: str,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get messages in a chat with pagination."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    messages = await get_messages(chat_id, db, limit=limit, offset=offset)
+    return {"messages": messages}
+
+
+@router.post("/{chat_id}/messages")
+@limiter.limit("60/minute")
+async def create_message(
+    request: Request,
+    chat_id: str,
+    body: MessageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Send a text message in a chat. Rate limited: 60/minute."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    message = await send_message(
+        chat_id=chat_id,
+        sender_id=current_user["id"],
+        content=body.content,
+        msg_type=body.type,
+        db=db,
+    )
+
+    # Broadcast via WebSocket to chat room
+    msg_data = {
+        "event": "new_message",
+        "id": message.id,
+        "senderId": message.sender_id,
+        "message": message.content,
+        "type": message.type,
+        "sentAt": message.sent_at.isoformat(),
+    }
+    await manager.broadcast_to_chat(chat_id, msg_data)
+
+    return msg_data
+
+
+@router.delete("/{chat_id}/messages/{message_id}")
+async def delete_message(
+    chat_id: str,
+    message_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Soft-delete a message (only the sender can delete)."""
+    from sqlalchemy import select
+    from models.message import Message
+
+    result = await db.execute(
+        select(Message).where(
+            Message.id == message_id,
+            Message.chat_id == chat_id,
+        )
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+        
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+        
+    if message.sender_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Can only delete your own messages")
+
+    message.is_deleted = True
+    message.content = ""  # Clear content for privacy
+    await db.flush()
+
+    # Notify chat room about deletion
+    await manager.broadcast_to_chat(chat_id, {
+        "event": "message_deleted",
+        "messageId": message_id,
+    })
+
+    logger.info(f"Message {message_id} soft-deleted by {current_user['id']}")
+    return {"message": "Message deleted"}
+
+
+@router.post("/{chat_id}/typing")
+async def typing_indicator(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Send a typing indicator to the chat room via WebSocket."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    await manager.broadcast_to_chat(chat_id, {
+        "event": "typing",
+        "userId": current_user["id"],
+    })
+    return {"status": "ok"}
+
+
+@router.put("/{chat_id}/read")
+async def mark_read(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Mark a chat as read for the current user."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    success = await mark_chat_read(chat_id, current_user["id"], db)
+    if not success:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return {"message": "Chat marked as read"}
+
+
+@router.post("/{chat_id}/media")
+async def upload_chat_media(
+    chat_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload media file and create a message for it."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    result = await upload_media(
+        chat_id=chat_id,
+        sender_id=current_user["id"],
+        file=file,
+        db=db,
+    )
+
+    # Broadcast via WebSocket
+    msg_data = {
+        "event": "new_message",
+        "id": result["message_id"],
+        "senderId": current_user["id"],
+        "message": result["url"],
+        "type": result["type"],
+        "sentAt": None,
+    }
+    await manager.broadcast_to_chat(chat_id, msg_data)
+
+    return result
+
+
+@router.get("/{chat_id}/media")
+async def list_chat_media(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """List all shared media in a chat."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    return await get_chat_media(chat_id)

@@ -3,7 +3,7 @@
 > 🚀 A secure and modern real-time chat application with message encryption, emoji reactions, and media sharing!
 
 ![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
-![Firebase](https://img.shields.io/badge/Firebase-10-FFCA28?style=for-the-badge&logo=firebase)
+![FastAPI](https://img.shields.io/badge/FastAPI-10-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-3-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite)
 ![Redux Toolkit](https://img.shields.io/badge/Redux--Toolkit-%23CE3534.svg?style=for-the-badge&logo=redux&logoColor=white)
@@ -17,7 +17,7 @@ GentleMsg is a full-featured real-time chat app where you can:
 - 💬 Chat instantly with other users
 - 📎 Share images and media files securely
 - 😀 Pick and react with emojis
-- 🔐 All messages are encrypted for privacy
+- 🔐 Advanced security with JWT authorization and profanity filtering
 - 📱 Works seamlessly on mobile and desktop
 - 🌙 Includes dark mode support for better usability
 
@@ -25,12 +25,13 @@ GentleMsg is a full-featured real-time chat app where you can:
 
 ## ✨ Features
 
-- 🔒 **Secure Authentication** via Firebase Auth  
-- 💬 **Real-Time Messaging** with Firestore  
-- 📎 **Media Sharing** (images/docs)  
-- 😀 **Emoji Picker Integration**  
-- 🔐 **Encrypted Messages** with CryptoJS  
-- 🎨 **Responsive UI** with Tailwind CSS & Framer Motion  
+- 🔒 **Secure Authentication** via Google OAuth integration
+- 💬 **Real-Time Messaging** powered by FastAPI WebSockets
+- 📎 **Media Sharing** (images/docs) with server-side validation
+- 😀 **Emoji Picker Integration**
+- 🛡️ **GDPR Compliant** (Account Deletion & Data Export)
+- ✨ **Content Moderation** (Profanity Filtering)
+- 🎨 **Responsive UI** with Tailwind CSS & Framer Motion
 - 🌗 **Dark Mode Ready**
 
 ---
@@ -38,23 +39,86 @@ GentleMsg is a full-featured real-time chat app where you can:
 ## 🛠️ Tech Stack
 
 ### 🧩 Frontend
-- React 18
-- React Router
+- React 18, React Router
 - Redux Toolkit + Reselect
-- Emoji Picker
-- Framer Motion
+- IndexedDB (Dexie.js) for local caching
+- Tailwind CSS 3, Vite, Framer Motion
 
 ### 🔐 Backend & Auth
-- Firebase Authentication
-- Firestore Realtime Database
-- CryptoJS for encryption
-- Universal Cookie
+- Python 3.10+ & FastAPI
+- SQLAlchemy (async) + Alembic
+- SQLite
+- WebSockets for real-time bi-directional events
 
-### 🎨 Styling & Tools
-- Tailwind CSS 3
-- Vite (build tool)
-- ESLint + PostCSS
-- Formspree (for contact)
+## 📋 Prerequisites
+
+To run this locally, you will need:
+- Node.js 18+
+- Python 3.10+
+
+---
+
+## 📥 Installation
+
+### Backend Setup (API & WebSockets)
+
+1. Open a new terminal and navigate to the backend folder:
+```bash
+git clone https://github.com/sankalp-singh-07/gentlemsg.git
+cd gentlemsg/backend
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Configure environment variables:
+```bash
+# Duplicate .env.example to .env and fill in required variables like your Google Client ID
+cp .env.example .env
+```
+
+5. Run database migrations to set up your local SQLite database:
+```bash
+alembic upgrade head
+```
+
+6. Start the FastAPI server:
+```bash
+uvicorn main:app --reload --port 8000
+```
+The API will be available at `http://localhost:8000` and API docs at `http://localhost:8000/docs`.
+
+
+### Frontend Setup
+
+1. Open a new terminal and navigate to the frontend folder:
+```bash
+cd gentlemsg/frontend
+```
+
+2. Install node dependencies:
+```bash
+npm install
+```
+
+3. Configure environment variables:
+```bash
+# Set VITE_API_URL to http://localhost:8000
+cp .env.example .env
+```
+
+4. Start the frontend development server:
+```bash
+npm run dev
+```
 
 ---
 
@@ -63,22 +127,3 @@ GentleMsg is a full-featured real-time chat app where you can:
 🌐 **Try it live**: [https://www.gentlemsg.online](https://www.gentlemsg.online)
 
 📂 **Source Code**: [github.com/sankalp-singh-07/gentlemsg](https://github.com/sankalp-singh-07/gentlemsg)
-
----
-
-## 📋 Prerequisites
-
-Make sure you have the following set up:
-
-- 📦 Node.js 18+ installed — [Download Node](https://nodejs.org/)
-- 🔥 Firebase project created — [Firebase Console](https://console.firebase.google.com/)
-
----
-
-## 📥 Installation
-
-```bash
-git clone https://github.com/sankalp-singh-07/gentlemsg.git
-cd gentlemsg
-npm install
-npm run dev
