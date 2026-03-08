@@ -71,9 +71,10 @@ async def send_request(sender_id: str, receiver_id: str, db: AsyncSession) -> Fr
     db.add(request)
     await db.flush()
 
-    # Push real-time notification to receiver via WebSocket
+    # Push real-time notification
     sender_result = await db.execute(select(User).where(User.id == sender_id))
     sender = sender_result.scalar_one_or_none()
+
     if sender:
         await manager.send_to_user(receiver_id, {
             "event": "friend_request",
@@ -86,12 +87,9 @@ async def send_request(sender_id: str, receiver_id: str, db: AsyncSession) -> Fr
             },
         })
 
-    # Send simulated email notification
-    if receiver_result and sender_result:
-        receiver_user = receiver.scalar_one_or_none() if hasattr(receiver, "scalar_one_or_none") else None # Usually this is already evaluated above
-        # The receiver result was already evaluated to check existance, so we need a fresh query or pass the object
-        # Better approach: check existence and store the object
-        pass # Will fix in next replacement for cleaner code
+    # Send email notification
+    if receiver_user and sender:
+        await send_friend_request_email(receiver_user.email, sender.name)
 
     return request
 
