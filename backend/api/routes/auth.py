@@ -44,22 +44,23 @@ async def google_callback(
 
     try:
         result = await authenticate_with_google(code, db)
-        redirect_url = f"{settings.FRONTEND_URL}/auth/callback"
+        # Deliver access token via query param for SPA localStorage; refresh stays httpOnly cookie
+        access_token = result["access_token"]
+        redirect_url = f"{settings.FRONTEND_URL}/auth/callback?token={access_token}"
         response = RedirectResponse(redirect_url)
         response.set_cookie(
             key="refresh_token",
             value=result["refresh_token"],
             httponly=True,
-            secure=settings.ENVIRONMENT == "production",
+            secure=settings.is_production,
             samesite="lax",
             path="/",
-            max_age=60 * 60 * 24 * 4
+            max_age=60 * 60 * 24 * 7,  # match refresh token lifetime
         )
         return response
 
     except Exception as e:
         logger.error(f"Google OAuth callback error: {str(e)}")
-        # Redirect to frontend login with error indicator if needed, or raise exception
         return RedirectResponse(f"{settings.FRONTEND_URL}/?error=oauth_failed")
 
 
@@ -93,7 +94,8 @@ async def logout(
     response.delete_cookie(
         "refresh_token",
         path="/",
-        samesite="lax"
+        samesite="lax",
+        secure=settings.is_production,
     )
     return response
 

@@ -239,7 +239,7 @@ async def upload_chat_media(
         "senderId": current_user["id"],
         "message": result["url"],
         "type": result["type"],
-        "sentAt": None,
+        "sentAt": result.get("sent_at"),
     }
     await manager.broadcast_to_chat(chat_id, msg_data)
 

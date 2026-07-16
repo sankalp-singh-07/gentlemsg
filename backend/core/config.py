@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./gentlemsg.db"
     JWT_SECRET: str = "dev-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_MINUTES: int = 1440
+    # Short-lived access token (minutes); refresh token stays in httpOnly cookie
+    JWT_EXPIRATION_MINUTES_ACCESS: int = 60
+    JWT_EXPIRATION_MINUTES_REFRESH: int = 60 * 24 * 7  # 7 days
+    # Legacy alias — prefer ACCESS/REFRESH above
+    JWT_EXPIRATION_MINUTES: int = 60
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
@@ -43,6 +47,12 @@ class Settings(BaseSettings):
             msg = "GOOGLE_CLIENT_ID is not configured. Google OAuth will not work."
             issues.append(msg)
 
+        if self.is_production and (
+            not self.JWT_SECRET
+            or self.JWT_SECRET == "dev-secret-key-change-in-production"
+        ):
+            issues.append("JWT_SECRET must be set to a strong secret in production.")
+
         if issues:
             if self.is_production:
                 raise ValueError(
@@ -54,8 +64,8 @@ class Settings(BaseSettings):
                     logger.warning(f"⚠️  CONFIG WARNING: {issue}")
 
     class Config:
-        env_file = ".env" #Read variables from env
+        env_file = ".env"  # Read variables from env
 
 
 settings = Settings()
-settings.validate_environment() # It checks configuration and warns or errors.
+settings.validate_environment()

@@ -42,17 +42,20 @@ async def chat_websocket(
     await manager.connect_chat(chat_id, websocket)
     try:
         while True:
-            # Keep connection alive, listen for client messages (pings, etc.)
             data = await websocket.receive_text()
-            # Client can send messages directly via WS too
+            # Keepalive only — message persistence is REST-only to prevent spoofed events
             if data == "ping":
                 await websocket.send_text("pong")
-            else:
-                try:
-                    msg = json.loads(data)
-                    msg["senderId"] = user["id"]  # Ensure senderId from token
-                    await manager.broadcast_to_chat(chat_id, msg)
-                except json.JSONDecodeError:
-                    pass
+                continue
+            try:
+                msg = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+            # Allow client-originated typing indicators only (server stamps userId)
+            if isinstance(msg, dict) and msg.get("event") == "typing":
+                await manager.broadcast_to_chat(chat_id, {
+                    "event": "typing",
+                    "userId": user["id"],
+                })
     except WebSocketDisconnect:
         await manager.disconnect_chat(chat_id, websocket)

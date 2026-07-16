@@ -48,7 +48,7 @@ const Admin = () => {
 		window.addEventListener('click', handleFriendsDialog);
 
 		return () => {
-			window.addEventListener('click', handleFriendsDialog);
+			window.removeEventListener('click', handleFriendsDialog);
 		};
 	}, [setOpenFriendsDialog]);
 
@@ -64,7 +64,7 @@ const Admin = () => {
 		window.addEventListener('click', handleNotifsDialog);
 
 		return () => {
-			window.addEventListener('click', handleNotifsDialog);
+			window.removeEventListener('click', handleNotifsDialog);
 		};
 	}, [setOpenNotifsDialog]);
 
@@ -80,7 +80,7 @@ const Admin = () => {
 		window.addEventListener('click', handleProfileDialog);
 
 		return () => {
-			window.addEventListener('click', handleProfileDialog);
+			window.removeEventListener('click', handleProfileDialog);
 		};
 	}, [setOpenProfileDialog]);
 

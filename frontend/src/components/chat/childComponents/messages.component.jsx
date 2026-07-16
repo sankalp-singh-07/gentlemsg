@@ -1,27 +1,25 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import { MessageContext } from '../../../context/message.context';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { decryptMessage, generateKey } from '../../../utils/encryption';
 
 const Messages = ({ receiverImg, receiverId }) => {
-	const { messages, chatId } = useContext(MessageContext);
+	const { messages } = useContext(MessageContext);
 	const messagesArr = messages.messages || [];
 
 	const { currentUser } = useSelector(selectCurrentUser);
-	const { receiverInfo, setReceiverInfo } = useState([]);
 
-	// Scroll
 	const messagesEndRef = useRef(null);
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 	}, [messagesArr]);
 
-	// Helper functions
 	const getDate = (timeStamp) => {
+		if (!timeStamp) return '';
 		const date = new Date(timeStamp);
-		const options = { day: 'numeric', month: 'short' };
+		const options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
@@ -32,6 +30,7 @@ const Messages = ({ receiverImg, receiverId }) => {
 		}
 
 		if (type === 'text') {
+			// Support both encrypted legacy messages and plain text
 			const decryptedMessage = decryptMessage(message, encryptionKey);
 			return decryptedMessage || message;
 		} else if (
@@ -46,11 +45,14 @@ const Messages = ({ receiverImg, receiverId }) => {
 				return [fullUrl, type];
 			});
 		}
+		return message;
 	};
+
+	if (!currentUser) return null;
 
 	return (
 		<>
-			{messagesArr.map((message, index) => {
+			{messagesArr.map((message) => {
 				const isOwn = message.senderId === currentUser.id;
 				const decryptedContent = showDecryptedMessage(
 					message.message,
@@ -59,13 +61,15 @@ const Messages = ({ receiverImg, receiverId }) => {
 
 				return (
 					<div
-						key={index}
+						key={message.id}
 						className={`message ${isOwn ? 'own' : ''}`}
 					>
 						{!isOwn && (
 							<img
 								src={receiverImg}
-								className="w-8 h-8 m-3 rounded-full"
+								alt=""
+								className="w-8 h-8 m-3 rounded-full object-cover"
+								referrerPolicy="no-referrer"
 							/>
 						)}
 						<div className="texts">
@@ -74,8 +78,9 @@ const Messages = ({ receiverImg, receiverId }) => {
 									{decryptedContent}
 								</span>
 							) : (
+								Array.isArray(decryptedContent) &&
 								decryptedContent.map((item, i) => (
-									<div key={i} className="justify-items-end">
+									<div key={`${message.id}-${i}`} className="justify-items-end">
 										{item[1] === 'image' ? (
 											<img
 												src={item[0]}
@@ -113,10 +118,10 @@ const Messages = ({ receiverImg, receiverId }) => {
 								{getDate(message.sentAt)}
 							</span>
 						</div>
-						<div ref={messagesEndRef} />
 					</div>
 				);
 			})}
+			<div ref={messagesEndRef} />
 		</>
 	);
 };

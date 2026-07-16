@@ -126,7 +126,10 @@ async def get_messages(
 
     result = await db.execute(
         select(Message)
-        .where(Message.chat_id == chat_id)
+        .where(
+            Message.chat_id == chat_id,
+            Message.is_deleted == False,  # noqa: E712 — SQLAlchemy boolean filter
+        )
         .order_by(Message.sent_at.asc())
         .limit(limit)
         .offset(offset)
@@ -139,7 +142,7 @@ async def get_messages(
             "senderId": msg.sender_id,
             "message": msg.content,
             "type": msg.type,
-            "sentAt": msg.sent_at.isoformat(),
+            "sentAt": msg.sent_at.isoformat() if msg.sent_at else None,
             "receiverId": (
                 chat.user2_id if msg.sender_id == chat.user1_id else chat.user1_id
             ) if chat else "",
@@ -269,6 +272,7 @@ async def upload_media(
         "url": file_url,
         "type": msg_type,
         "message_id": message.id,
+        "sent_at": message.sent_at.isoformat() if message.sent_at else None,
     }
 
 

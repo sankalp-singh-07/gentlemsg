@@ -189,11 +189,34 @@ const Chat = ({ inMobile }) => {
 	const handleSend = async () => {
 		if (text.trim() === '' || isUserBlocked || !receiverData.id) return;
 
+		const plainText = text.trim();
 		try {
 			const encryptionKey = generateKey(currentUser.id, receiverData.id);
-			const encryptedText = encryptMessage(text, encryptionKey);
-			await chatService.sendMessage(chatId, encryptedText, 'text');
+			const encryptedText = encryptMessage(plainText, encryptionKey);
+			const sent = await chatService.sendMessage(chatId, encryptedText, 'text');
 			setText('');
+			// Optimistic / immediate display from REST response (dedupe if WS also delivers)
+			if (sent?.id) {
+				setMessages((prev) => {
+					const existingMessages = prev?.messages || [];
+					if (existingMessages.some((m) => m.id === sent.id)) {
+						return prev;
+					}
+					return {
+						messages: [
+							...existingMessages,
+							{
+								id: sent.id,
+								senderId: sent.senderId || currentUser.id,
+								// Store ciphertext as backend does; Messages decrypts for display
+								message: sent.message || encryptedText,
+								type: sent.type || 'text',
+								sentAt: sent.sentAt || new Date().toISOString(),
+							},
+						],
+					};
+				});
+			}
 		} catch (error) {
 			console.error('Error sending message:', error);
 		}

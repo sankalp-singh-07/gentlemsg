@@ -10,7 +10,7 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 		setFilesArr(files);
 	}, [files]);
 
-	const { chatId } = useContext(MessageContext);
+	const { chatId, setMessages } = useContext(MessageContext);
 
 	const send = async () => {
 		if (isUserBlocked) {
@@ -19,7 +19,7 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 		}
 
 		const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-		const oversized = filesArr.filter(f => f.size > MAX_FILE_SIZE);
+		const oversized = filesArr.filter((f) => f.size > MAX_FILE_SIZE);
 		if (oversized.length > 0) {
 			alert('One or more files are too large. Maximum size is 25MB.');
 			setSending('Send');
@@ -29,9 +29,28 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 		setSending('Sending...');
 
 		try {
-			// Upload each file via the backend API
 			for (const file of filesArr) {
-				await chatService.uploadMedia(chatId, file);
+				const result = await chatService.uploadMedia(chatId, file);
+				if (result?.message_id && setMessages) {
+					setMessages((prev) => {
+						const existingMessages = prev?.messages || [];
+						if (existingMessages.some((m) => m.id === result.message_id)) {
+							return prev;
+						}
+						return {
+							messages: [
+								...existingMessages,
+								{
+									id: result.message_id,
+									senderId: currentUser?.id,
+									message: result.url,
+									type: result.type,
+									sentAt: result.sent_at || new Date().toISOString(),
+								},
+							],
+						};
+					});
+				}
 			}
 		} catch (error) {
 			console.error('Error uploading media:', error);

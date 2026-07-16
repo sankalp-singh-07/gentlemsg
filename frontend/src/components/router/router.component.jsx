@@ -35,7 +35,16 @@ const Router = () => {
 				<Route path="*" element={<NotFound />} />
 				<Route path="/contact-us" element={<ContactUs />} />
 				<Route path="/faqs" element={<FAQ />} />
-				<Route path="/chat" element={<Chat inMobile="show" />} />
+				<Route
+					path="/chat"
+					element={
+						currentUser ? (
+							<Chat inMobile="show" />
+						) : (
+							<Navigate to="/" />
+						)
+					}
+				/>
 			</Routes>
 		</BrowserRouter>
 	);
