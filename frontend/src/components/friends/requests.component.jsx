@@ -1,100 +1,172 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { friendSelector } from '../../store/friends/friends.selector';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import { acceptRequest, rejectRequest } from '../../store/thunks/thunks';
+import {
+	acceptRequest,
+	rejectRequest,
+	cancelFriendRequest,
+	getInitialData,
+} from '../../store/thunks/thunks';
 import { fetchChats } from '../../store/chats/chats.reducer';
-import * as chatService from '../../services/chatService';
+import { Avatar, Button, EmptyState } from '@/shared/ui';
+import { toast } from 'react-toastify';
+import { useState } from 'react';
 
 const Requests = () => {
 	const { requests } = useSelector(friendSelector);
 	const { currentUser } = useSelector(selectCurrentUser);
 	const dispatch = useDispatch();
+	const [busy, setBusy] = useState({});
 
-	const handleAccept = async (senderId) => {
-		dispatch(acceptRequest({ userId: currentUser.id, senderId }))
-			.unwrap()
-			.then(() => {
+	const received = (requests || []).filter(
+		(r) => currentUser?.id === r.receiverId
+	);
+	const sent = (requests || []).filter(
+		(r) => currentUser?.id === r.senderId
+	);
+
+	const withBusy = async (key, fn) => {
+		setBusy((b) => ({ ...b, [key]: true }));
+		try {
+			await fn();
+		} finally {
+			setBusy((b) => ({ ...b, [key]: false }));
+		}
+	};
+
+	const handleAccept = (senderId) =>
+		withBusy(`a-${senderId}`, async () => {
+			try {
+				await dispatch(
+					acceptRequest({ userId: currentUser.id, senderId })
+				).unwrap();
 				dispatch(fetchChats(currentUser.id));
-			})
-			.catch((error) => console.error('Error accepting request:', error));
-	};
+				dispatch(getInitialData(currentUser.id));
+				toast.success('Friend request accepted');
+			} catch (e) {
+				toast.error('Could not accept request');
+			}
+		});
 
-	const handleReject = (senderId) => {
-		dispatch(rejectRequest({ userId: currentUser.id, senderId }));
-	};
+	const handleReject = (senderId) =>
+		withBusy(`r-${senderId}`, async () => {
+			try {
+				await dispatch(
+					rejectRequest({ userId: currentUser.id, senderId })
+				).unwrap();
+				toast.info('Request declined');
+			} catch {
+				toast.error('Could not decline request');
+			}
+		});
 
-	if (!requests || requests.length === 0) {
-		return <p className="text-center p-4 text-gray-500">No pending requests</p>;
+	const handleCancel = (receiverId) =>
+		withBusy(`c-${receiverId}`, async () => {
+			try {
+				await dispatch(cancelFriendRequest({ receiverId })).unwrap();
+				toast.info('Request cancelled');
+			} catch {
+				toast.error('Could not cancel request');
+			}
+		});
+
+	if (!received.length && !sent.length) {
+		return (
+			<EmptyState
+				title="No pending requests"
+				description="When someone sends you a friend request, it will show up here."
+			/>
+		);
 	}
 
 	return (
-		<div className="grid gap-4 grid-cols-1 md:grid-cols-2 mx-4 my-4 overflow-scroll scrollbar-hide">
-			{requests.map((req) => {
-				// For received requests (current user is the receiver)
-				if (currentUser.id === req.receiverId) {
-					return (
-						<div
-							key={req.senderId}
-							className="bg-gray-100 p-4 rounded shadow-md flex flex-col items-center gap-2 justify-between"
-						>
-							<div className="flex flex-col items-center gap-2">
-								<img
-									src={req.senderPhotoURL}
-									alt="..."
-									referrerPolicy="no-referrer"
-									className="sm:w-12 sm:h-12 rounded-full w-8 h-8 object-cover"
-								/>
-								<h1 className="text-sm text-center font-medium min-w-fit lg:text-base">
-									{req.senderName}
-								</h1>
-							</div>
-							<div className="flex gap-2">
-								<button
-									onClick={() => handleAccept(req.senderId)}
-									className="bg-blue-500 text-white sm:px-2 sm:py-2 rounded hover:bg-blue-700 py-2 px-4"
-								>
-									<span className="md:text-sm text-xs font-semibold text-center">
+		<div className="mx-4 my-4 space-y-6 overflow-scroll scrollbar-hide max-h-[50vh] pb-12">
+			{received.length > 0 && (
+				<section>
+					<h3 className="text-xs font-semibold uppercase tracking-wide text-black/50 mb-2">
+						Received
+					</h3>
+					<div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+						{received.map((req) => (
+							<div
+								key={req.id || req.senderId}
+								className="bg-quatery p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center gap-3 justify-between"
+							>
+								<div className="flex items-center gap-3 min-w-0">
+									<Avatar
+										src={req.senderPhotoURL}
+										alt={req.senderName}
+										size={48}
+									/>
+									<div className="min-w-0">
+										<p className="font-medium text-black truncate">
+											{req.senderName}
+										</p>
+										<p className="text-xs text-black/50">
+											Wants to connect
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-2 shrink-0">
+									<Button
+										size="sm"
+										loading={busy[`a-${req.senderId}`]}
+										onClick={() => handleAccept(req.senderId)}
+									>
 										Accept
-									</span>
-								</button>
-								<button
-									onClick={() => handleReject(req.senderId)}
-									className="bg-red-500 text-white sm:px-2 sm:py-2 rounded hover:bg-red-700 py-2 px-4"
-								>
-									<span className="md:text-sm text-xs font-semibold text-center">
+									</Button>
+									<Button
+										size="sm"
+										variant="danger"
+										loading={busy[`r-${req.senderId}`]}
+										onClick={() => handleReject(req.senderId)}
+									>
 										Reject
-									</span>
-								</button>
+									</Button>
+								</div>
 							</div>
-						</div>
-					);
-				}
-				// For sent requests (current user is the sender)
-				if (currentUser.id === req.senderId) {
-					return (
-						<div
-							key={req.receiverId}
-							className="flex bg-quatery p-4 rounded shadow-md items-center justify-between"
-						>
-							<div className="flex items-center gap-3">
-								<img
-									src={req.receiverPhotoURL}
-									alt="..."
-									referrerPolicy="no-referrer"
-									className="w-12 h-12 rounded-full object-cover"
-								/>
-								<h1 className="text-sm text-center font-medium min-w-fit lg:text-base">
-									{req.receiverName}
-								</h1>
+						))}
+					</div>
+				</section>
+			)}
+
+			{sent.length > 0 && (
+				<section>
+					<h3 className="text-xs font-semibold uppercase tracking-wide text-black/50 mb-2">
+						Sent
+					</h3>
+					<div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+						{sent.map((req) => (
+							<div
+								key={req.id || req.receiverId}
+								className="bg-quatery p-4 rounded-xl shadow-sm flex items-center justify-between gap-3"
+							>
+								<div className="flex items-center gap-3 min-w-0">
+									<Avatar
+										src={req.receiverPhotoURL}
+										alt={req.receiverName}
+										size={48}
+									/>
+									<div className="min-w-0">
+										<p className="font-medium text-black truncate">
+											{req.receiverName}
+										</p>
+										<p className="text-xs text-amber-600">Pending</p>
+									</div>
+								</div>
+								<Button
+									size="sm"
+									variant="ghost"
+									loading={busy[`c-${req.receiverId}`]}
+									onClick={() => handleCancel(req.receiverId)}
+								>
+									Cancel
+								</Button>
 							</div>
-							<div className="text-end md:text-sm text-xs">
-								{req.status}
-							</div>
-						</div>
-					);
-				}
-				return null;
-			})}
+						))}
+					</div>
+				</section>
+			)}
 		</div>
 	);
 };

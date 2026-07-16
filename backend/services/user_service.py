@@ -59,11 +59,156 @@ async def generate_username_suggestions(base_name: str, db: AsyncSession, count:
     return suggestions
 
 
-async def search_users(username: str, db: AsyncSession) -> list[User]:
+async def search_users(
+    query: str,
+    db: AsyncSession,
+    *,
+    current_user_id: str | None = None,
+    limit: int = 20,
+) -> list[dict]:
+    """Ranked user search by username and display name.
+
+    Ranking (lower is better):
+      0 = exact username match
+      1 = username prefix
+      2 = name prefix
+      3 = username contains
+      4 = name contains
+    Excludes current user and any users blocked in either direction.
+    """
+    q = (query or "").strip()
+    if len(q) < 1:
+        return []
+
+    q_lower = q.lower()
+    pattern_prefix = f"{q_lower}%"
+    pattern_contains = f"%{q_lower}%"
+
+    # Blocked pair exclusion
+    blocked_ids: set[str] = set()
+    if current_user_id:
+        from models.blocked_user import BlockedUser
+
+        blocked_result = await db.execute(
+            select(BlockedUser).where(
+                or_(
+                    BlockedUser.blocker_id == current_user_id,
+                    BlockedUser.blocked_id == current_user_id,
+                )
+            )
+        )
+        for b in blocked_result.scalars().all():
+            other = b.blocked_id if b.blocker_id == current_user_id else b.blocker_id
+            blocked_ids.add(other)
+
     result = await db.execute(
-        select(User).where(func.lower(User.user_name).like(f"{username.lower()}%"))
+        select(User).where(
+            or_(
+                func.lower(User.user_name).like(pattern_contains),
+                func.lower(User.name).like(pattern_contains),
+            )
+        ).limit(limit * 3)  # fetch extra before ranking/filter
     )
-    return list(result.scalars().all())
+    users = list(result.scalars().all())
+
+    scored: list[tuple[int, User]] = []
+    for u in users:
+        if current_user_id and u.id == current_user_id:
+            continue
+        if u.id in blocked_ids:
+            continue
+        uname = (u.user_name or "").lower()
+        name = (u.name or "").lower()
+        if uname == q_lower:
+            rank = 0
+        elif uname.startswith(q_lower):
+            rank = 1
+        elif name.startswith(q_lower):
+            rank = 2
+        elif q_lower in uname:
+            rank = 3
+        else:
+            rank = 4
+        scored.append((rank, u))
+
+    scored.sort(key=lambda t: (t[0], (t[1].user_name or "").lower()))
+    top = scored[:limit]
+
+    return [
+        {
+            "id": u.id,
+            "uid": u.id,
+            "name": u.name,
+            "photoURL": u.photo_url,
+            "userName": u.user_name,
+            "isOnline": u.is_online,
+            "rank": rank,
+        }
+        for rank, u in top
+    ]
+
+
+async def global_search(
+    query: str,
+    db: AsyncSession,
+    current_user_id: str,
+    limit: int = 10,
+) -> dict:
+    """Search users + chats (by peer name/username). Groups reserved for later."""
+    from models.chat import Chat, Friendship
+
+    q = (query or "").strip()
+    if len(q) < 2:
+        return {"users": [], "chats": [], "groups": [], "query": q}
+
+    users = await search_users(q, db, current_user_id=current_user_id, limit=limit)
+
+    # Chats: match friend / peer name against current user's chats
+    chats_result = await db.execute(
+        select(Chat).where(
+            or_(Chat.user1_id == current_user_id, Chat.user2_id == current_user_id)
+        )
+    )
+    chats = list(chats_result.scalars().all())
+    peer_ids = []
+    for c in chats:
+        peer_ids.append(c.user2_id if c.user1_id == current_user_id else c.user1_id)
+
+    peers_map: dict[str, User] = {}
+    if peer_ids:
+        peers_result = await db.execute(select(User).where(User.id.in_(peer_ids)))
+        peers_map = {u.id: u for u in peers_result.scalars().all()}
+
+    q_lower = q.lower()
+    chat_hits = []
+    for c in chats:
+        peer_id = c.user2_id if c.user1_id == current_user_id else c.user1_id
+        peer = peers_map.get(peer_id)
+        if not peer:
+            continue
+        name = (peer.name or "").lower()
+        uname = (peer.user_name or "").lower()
+        if q_lower not in name and q_lower not in uname:
+            continue
+        chat_hits.append({
+            "chatId": c.id,
+            "receiverId": peer_id,
+            "receiverName": peer.name,
+            "receiverPhotoURL": peer.photo_url,
+            "receiverUserName": peer.user_name,
+            "lastMessage": c.last_message,
+            "type": c.last_message_type,
+            "sentAt": c.last_message_at.isoformat() if c.last_message_at else None,
+        })
+        if len(chat_hits) >= limit:
+            break
+
+    return {
+        "query": q,
+        "users": users,
+        "chats": chat_hits,
+        "groups": [],
+    }
 
 
 async def update_profile(user_id: str, data: dict, db: AsyncSession) -> User | None:

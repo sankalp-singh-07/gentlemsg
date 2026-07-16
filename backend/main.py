@@ -18,7 +18,7 @@ from db.database import engine
 import models  # noqa: F401
 
 # Import route modules
-from api.routes import auth, users, chats, friends, notifications
+from api.routes import auth, users, chats, friends, notifications, search
 
 # Import WebSocket route modules
 from websocket import chat_ws, presence_ws
@@ -96,6 +96,7 @@ tags_metadata = [
     {"name": "friends", "description": "Friend requests and connections"},
     {"name": "chats", "description": "Messaging and media uploads"},
     {"name": "notifications", "description": "Push notification tracking"},
+    {"name": "search", "description": "Global search across users and chats"},
 ]
 
 app = FastAPI(
@@ -147,6 +148,7 @@ api_v1_router.include_router(users.router)
 api_v1_router.include_router(friends.router)
 api_v1_router.include_router(chats.router)
 api_v1_router.include_router(notifications.router)
+api_v1_router.include_router(search.router)
 
 app.include_router(api_v1_router)
 

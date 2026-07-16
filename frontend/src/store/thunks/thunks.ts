@@ -47,3 +47,19 @@ export const rejectRequest = createAsyncThunk(
 		return { ...result, userId, senderId };
 	}
 );
+
+export const cancelFriendRequest = createAsyncThunk(
+	'friendData/cancelFriendRequest',
+	async ({ receiverId }: { receiverId: string }) => {
+		await friendService.cancelRequest(receiverId);
+		return { receiverId };
+	}
+);
+
+export const unfriendUser = createAsyncThunk(
+	'friendData/unfriendUser',
+	async ({ friendId }: { friendId: string }) => {
+		await friendService.unfriend(friendId);
+		return { friendId };
+	}
+);

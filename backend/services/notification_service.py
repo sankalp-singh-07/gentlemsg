@@ -40,9 +40,9 @@ async def get_notifications(
             "type": notif.type,
             "from": notif.from_user_id,
             "to": notif.user_id,
-            "createdAt": int(notif.created_at.timestamp() * 1000),
+            "createdAt": int(notif.created_at.timestamp() * 1000) if notif.created_at else None,
             "userName": sender.user_name if sender else "",
-            "email": sender.email if sender else "",
+            "name": sender.name if sender else "",
             "photoURL": sender.photo_url if sender else "",
         })
 

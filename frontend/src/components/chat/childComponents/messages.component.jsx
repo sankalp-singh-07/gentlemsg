@@ -25,6 +25,8 @@ const Messages = ({
 	onLoadOlder,
 	hasMore,
 	loadingOlder,
+	highlightMessageId,
+	highlightQuery,
 }) => {
 	const { messages } = useContext(MessageContext);
 	const messagesArr = messages?.messages || [];
@@ -34,6 +36,7 @@ const Messages = ({
 	const bottomRef = useRef(null);
 	const stickToBottom = useRef(true);
 	const [menu, setMenu] = useState(null); // { id, x, y }
+	const msgRefs = useRef({});
 
 	const scrollToBottom = useCallback((smooth = true) => {
 		bottomRef.current?.scrollIntoView({
@@ -42,10 +45,39 @@ const Messages = ({
 	}, []);
 
 	useEffect(() => {
-		if (stickToBottom.current) {
+		if (stickToBottom.current && !highlightMessageId) {
 			scrollToBottom(true);
 		}
-	}, [messagesArr, typingUserId, scrollToBottom]);
+	}, [messagesArr, typingUserId, scrollToBottom, highlightMessageId]);
+
+	useEffect(() => {
+		if (!highlightMessageId) return;
+		const el = msgRefs.current[highlightMessageId];
+		if (el) {
+			stickToBottom.current = false;
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}, [highlightMessageId]);
+
+	const renderHighlighted = (text) => {
+		if (!highlightQuery || !text) return text;
+		const q = highlightQuery.trim();
+		if (q.length < 2) return text;
+		try {
+			const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+			return parts.map((part, i) =>
+				part.toLowerCase() === q.toLowerCase() ? (
+					<mark key={i} className="bg-yellow-300 text-black rounded px-0.5">
+						{part}
+					</mark>
+				) : (
+					part
+				)
+			);
+		} catch {
+			return text;
+		}
+	};
 
 	const handleScroll = () => {
 		const el = containerRef.current;
@@ -155,8 +187,15 @@ const Messages = ({
 					messagesArr.findIndex((m) => m.id === peerLastReadId) >=
 						messagesArr.findIndex((m) => m.id === message.id);
 
+				const isHighlight = highlightMessageId === message.id;
+
 				return (
-					<div key={message.id || message.tempId}>
+					<div
+						key={message.id || message.tempId}
+						ref={(el) => {
+							if (message.id) msgRefs.current[message.id] = el;
+						}}
+					>
 						{showDay && (
 							<div className="flex justify-center my-3">
 								<span className="text-xs bg-black/10 text-black/70 px-3 py-1 rounded-full">
@@ -174,7 +213,9 @@ const Messages = ({
 							</div>
 						)}
 						<div
-							className={`message ${isOwn ? 'own' : ''} group`}
+							className={`message ${isOwn ? 'own' : ''} group ${
+								isHighlight ? 'ring-2 ring-yellow-400 rounded-xl' : ''
+							}`}
 							onContextMenu={(e) => openMenu(e, message)}
 						>
 							{!isOwn && (
@@ -200,7 +241,7 @@ const Messages = ({
 										}`}
 										onDoubleClick={(e) => openMenu(e, message)}
 									>
-										{textContent}
+										{renderHighlighted(textContent)}
 										{message.editedAt && (
 											<span className="text-[10px] opacity-60 ml-1">
 												(edited)

@@ -26,19 +26,13 @@ async def search(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Search users by username. Rate limited: 60/minute. Email is not returned."""
-    users = await search_users(username, db)
-    return [
-        {
-            "uid": u.id,
-            "id": u.id,
-            "name": u.name,
-            "photoURL": u.photo_url,
-            "userName": u.user_name,
-        }
-        for u in users
-        if u.id != current_user["id"]
-    ]
+    """Ranked user search by username/name. Rate limited: 60/minute. No emails."""
+    return await search_users(
+        username,
+        db,
+        current_user_id=current_user["id"],
+        limit=20,
+    )
 
 
 @router.get("/{user_id}")

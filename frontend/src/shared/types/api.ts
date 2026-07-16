@@ -128,6 +128,8 @@ export interface SearchUserResult {
 	photoURL?: string;
 	userName?: string;
 	email?: string;
+	isOnline?: boolean;
+	rank?: number;
 }
 
 /** Server → client WebSocket event envelopes */

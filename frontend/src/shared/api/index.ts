@@ -4,3 +4,5 @@ export * from './chats';
 export * from './friends';
 export * from './users';
 export * from './notifications';
+export * from './search';
+

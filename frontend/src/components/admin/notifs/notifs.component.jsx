@@ -1,38 +1,50 @@
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
-import { useState } from 'react';
 import * as notificationService from '../../../services/notificationService';
+import { removeNotificationLocal } from '../../../store/friends/friends.reducer';
+import { Avatar, EmptyState, Button } from '@/shared/ui';
+import { X } from 'lucide-react';
 import './notifs.styles.css';
 
 const Notifs = () => {
 	const { notifs } = useSelector(friendSelector);
 	const { setOpenNotifsDialog } = useContext(DialogContext);
-	const [notifications, setNotifications] = useState(notifs);
+	const [notifications, setNotifications] = useState(notifs || []);
+	const dispatch = useDispatch();
+
+	useEffect(() => {
+		setNotifications(notifs || []);
+	}, [notifs]);
 
 	const messageGen = (notif) => {
+		const who = notif.name || notif.userName || 'Someone';
 		if (notif.type === 'accepted') {
-			return `${notif.userName} accepted your friend request`;
-		} else if (notif.type === 'rejected') {
-			return `${notif.userName} rejected your friend request`;
+			return `${who} accepted your friend request`;
 		}
-		return '';
+		if (notif.type === 'rejected') {
+			return `${who} declined your friend request`;
+		}
+		return `${who} · ${notif.type || 'notification'}`;
 	};
 
 	const getDate = (timeStamp) => {
 		if (!timeStamp) return '';
-		const date = new Date(timeStamp);
-		const options = { day: 'numeric', month: 'short' };
-		return new Intl.DateTimeFormat('en-US', options).format(date);
+		const date = new Date(
+			typeof timeStamp === 'number' ? timeStamp : timeStamp
+		);
+		return new Intl.DateTimeFormat(undefined, {
+			day: 'numeric',
+			month: 'short',
+			hour: '2-digit',
+			minute: '2-digit',
+		}).format(date);
 	};
 
 	const handleDelete = async (notif) => {
-		// Remove from local state immediately
-		setNotifications((prev) =>
-			prev.filter((n) => n.id !== notif.id)
-		);
-
+		setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+		dispatch(removeNotificationLocal(notif.id));
 		try {
 			await notificationService.deleteNotification(notif.id);
 		} catch (error) {
@@ -41,46 +53,64 @@ const Notifs = () => {
 	};
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md rounded-lg">
-			<div
-				className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row "
-				style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}
-			>
+		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 max-h-[70vh] absolute m-auto top-0 right-0 bottom-0 left-0 shadow-lg rounded-xl overflow-hidden z-40 flex flex-col">
+			<div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
+				<h2 className="font-semibold text-black">Notifications</h2>
+				<button
+					type="button"
+					onClick={() => setOpenNotifsDialog(false)}
+					aria-label="Close"
+					className="p-1 hover:bg-black/5 rounded"
+				>
+					<X size={18} />
+				</button>
+			</div>
+			<div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+				{(!notifications || notifications.length === 0) && (
+					<EmptyState
+						title="All caught up"
+						description="No notifications right now."
+					/>
+				)}
 				{notifications.map((notif, index) => (
 					<div
 						key={notif.id || index}
-						className="flex bg-tertiary px-4 py-2 justify-between items-center gap-2 rounded-md w-full h-fit"
+						className="flex bg-tertiary px-3 py-2 justify-between items-center gap-2 rounded-lg w-full"
 					>
-						<div className="flex justify-self-start items-center gap-3 min-w-36 mr-3">
-							<img
+						<div className="flex items-center gap-3 min-w-0 flex-1">
+							<Avatar
 								src={notif.photoURL}
-								alt="..."
-								referrerPolicy="no-referrer"
-								className="w-10 h-10 rounded-full"
+								alt={notif.userName || 'User'}
+								size={40}
 							/>
-							<p className="text-md text-start text-black">
-								{messageGen(notif)}
-							</p>
+							<div className="min-w-0">
+								<p className="text-sm text-black truncate">
+									{messageGen(notif)}
+								</p>
+								<p className="text-xs text-black/50">
+									{getDate(notif.createdAt)}
+								</p>
+							</div>
 						</div>
-						<div className="flex gap-2 items-center text-end ">
-							<p className="text-sm text-black">
-								{getDate(notif.createdAt)}
-							</p>
-							<button
-								onClick={() => handleDelete(notif)}
-								className="text-black"
-							>
-								X
-							</button>
-						</div>
+						<button
+							type="button"
+							onClick={() => handleDelete(notif)}
+							className="text-black/40 hover:text-red-500 p-1 shrink-0"
+							aria-label="Dismiss"
+						>
+							<X size={16} />
+						</button>
 					</div>
 				))}
-				<button
-					className="py-1 px-2 text-base font-semibold text-tertiary bg-black hover:bg-tertiary w-full h-9 hover:text-zinc-950 dark:hover:text-zinc-50 rounded-md"
+			</div>
+			<div className="p-3 border-t border-black/10">
+				<Button
+					variant="secondary"
+					className="w-full"
 					onClick={() => setOpenNotifsDialog(false)}
 				>
 					Close
-				</button>
+				</Button>
 			</div>
 		</div>
 	);

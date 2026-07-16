@@ -4,13 +4,15 @@ import {
 	acceptRequest,
 	rejectRequest,
 	getInitialData,
+	cancelFriendRequest,
+	unfriendUser,
 } from '../thunks/thunks';
 
 const INITIAL_STATE = {
-	friends: [],    // Array of friend profile objects
-	requests: [],   // Array of request objects with sender/receiver profiles
-	blocked: {},    // Map of chatId -> { blockedUser, blockedBy }
-	notifs: [],     // Array of notification objects with sender profiles
+	friends: [],
+	requests: [],
+	blocked: {},
+	notifs: [],
 	status: 'idle',
 	error: null,
 };
@@ -27,6 +29,9 @@ const friendDataSlice = createSlice({
 			state.notifs = notifs;
 			state.status = 'success';
 		},
+		removeNotificationLocal: (state, action) => {
+			state.notifs = state.notifs.filter((n) => n.id !== action.payload);
+		},
 	},
 	extraReducers: (builder) => {
 		builder
@@ -42,7 +47,6 @@ const friendDataSlice = createSlice({
 			})
 			.addCase(sendRequests.fulfilled, (state, action) => {
 				state.status = 'success';
-				// API returns the full request object
 				state.requests.push(action.payload);
 			})
 			.addCase(sendRequests.rejected, (state, action) => {
@@ -50,21 +54,30 @@ const friendDataSlice = createSlice({
 				state.error = action.error.message;
 			})
 			.addCase(acceptRequest.fulfilled, (state, action) => {
-				// Remove the accepted request and add to friends
 				state.requests = state.requests.filter(
-					(req) => !(req.senderId === action.payload.senderId)
+					(req) => req.senderId !== action.payload.senderId
 				);
-				// Add friend (will be refreshed on next getInitialData)
-				state.friends.push({ id: action.payload.senderId });
+				if (!state.friends.some((f) => f.id === action.payload.senderId)) {
+					state.friends.push({ id: action.payload.senderId });
+				}
 			})
 			.addCase(rejectRequest.fulfilled, (state, action) => {
-				// Remove the rejected request
 				state.requests = state.requests.filter(
-					(req) => !(req.senderId === action.payload.senderId)
+					(req) => req.senderId !== action.payload.senderId
+				);
+			})
+			.addCase(cancelFriendRequest.fulfilled, (state, action) => {
+				state.requests = state.requests.filter(
+					(req) => req.receiverId !== action.payload.receiverId
+				);
+			})
+			.addCase(unfriendUser.fulfilled, (state, action) => {
+				state.friends = state.friends.filter(
+					(f) => f.id !== action.payload.friendId
 				);
 			});
 	},
 });
 
-export const { updateFriendData } = friendDataSlice.actions;
+export const { updateFriendData, removeNotificationLocal } = friendDataSlice.actions;
 export const friendDataReducer = friendDataSlice.reducer;

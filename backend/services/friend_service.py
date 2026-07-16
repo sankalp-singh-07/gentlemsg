@@ -293,10 +293,10 @@ async def get_friends(user_id: str, db: AsyncSession) -> list[dict]:
             friends.append({
                 "id": user.id,
                 "name": user.name,
-                "email": user.email,
                 "photoURL": user.photo_url,
                 "userName": user.user_name,
                 "isOnline": user.is_online,
+                "lastActive": user.last_active.isoformat() if user.last_active else None,
             })
 
     return friends

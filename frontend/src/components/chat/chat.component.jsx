@@ -38,6 +38,8 @@ const Chat = ({ inMobile }) => {
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [searchQ, setSearchQ] = useState('');
 	const [searchHits, setSearchHits] = useState([]);
+	const [searchIdx, setSearchIdx] = useState(0);
+	const [highlightId, setHighlightId] = useState(null);
 
 	const { chatId, setMessages, messages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -413,10 +415,27 @@ const Chat = ({ inMobile }) => {
 		if (searchQ.trim().length < 2) return;
 		try {
 			const res = await chatService.searchChatMessages(chatId, searchQ.trim());
-			setSearchHits(res.messages || []);
+			const hits = res.messages || [];
+			// oldest → newest for natural navigation
+			const ordered = [...hits].reverse();
+			setSearchHits(ordered);
+			setSearchIdx(0);
+			if (ordered.length) setHighlightId(ordered[0].id);
+			else {
+				setHighlightId(null);
+				toast.info('No matches');
+			}
 		} catch {
 			toast.error('Search failed');
 		}
+	};
+
+	const jumpSearch = (dir) => {
+		if (!searchHits.length) return;
+		const next =
+			(searchIdx + dir + searchHits.length) % searchHits.length;
+		setSearchIdx(next);
+		setHighlightId(searchHits[next].id);
 	};
 
 	const onDropFiles = (e) => {
@@ -488,13 +507,13 @@ const Chat = ({ inMobile }) => {
 			</div>
 
 			{searchOpen && (
-				<div className="px-3 py-2 border-b border-black/10 flex gap-2 items-center shrink-0">
+				<div className="px-3 py-2 border-b border-black/10 flex gap-2 items-center shrink-0 flex-wrap">
 					<input
 						value={searchQ}
 						onChange={(e) => setSearchQ(e.target.value)}
 						onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
 						placeholder="Search messages…"
-						className="flex-1 bg-quatery rounded-lg px-3 py-1.5 text-sm outline-none"
+						className="flex-1 min-w-[8rem] bg-quatery rounded-lg px-3 py-1.5 text-sm outline-none"
 					/>
 					<button
 						type="button"
@@ -504,7 +523,25 @@ const Chat = ({ inMobile }) => {
 						Go
 					</button>
 					{searchHits.length > 0 && (
-						<span className="text-xs text-black/50">{searchHits.length} hits</span>
+						<>
+							<span className="text-xs text-black/50">
+								{searchIdx + 1}/{searchHits.length}
+							</span>
+							<button
+								type="button"
+								className="text-xs px-2 py-1 rounded bg-black/5"
+								onClick={() => jumpSearch(-1)}
+							>
+								Prev
+							</button>
+							<button
+								type="button"
+								className="text-xs px-2 py-1 rounded bg-black/5"
+								onClick={() => jumpSearch(1)}
+							>
+								Next
+							</button>
+						</>
 					)}
 				</div>
 			)}
@@ -522,6 +559,8 @@ const Chat = ({ inMobile }) => {
 				onLoadOlder={loadOlder}
 				hasMore={hasMore}
 				loadingOlder={loadingOlder}
+				highlightMessageId={highlightId}
+				highlightQuery={searchHits.length ? searchQ : ''}
 			/>
 
 			{/* Composer */}
