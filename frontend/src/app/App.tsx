@@ -10,7 +10,7 @@ import {
 	setCurrentUser,
 	setLoading,
 } from '@/store/user/user.reducer';
-import { getToken, getMe } from '@/shared/api/auth';
+import { getToken, getMe, refreshToken, clearToken } from '@/shared/api/auth';
 import { presenceHub } from '@/shared/ws/presenceHub';
 import { fetchChats } from '@/store/chats/chats.reducer';
 import { getInitialData } from '@/store/thunks/thunks';
@@ -24,15 +24,27 @@ function App() {
 		let unsub: (() => void) | null = null;
 
 		const initAuth = async () => {
-			const token = getToken();
+			let token = getToken();
 			if (!token) {
-				dispatch(clearCurrentUser());
-				dispatch(setLoading(false));
-				return;
+				// Cookie may still hold a refresh token after access expired
+				try {
+					token = await refreshToken();
+				} catch {
+					dispatch(clearCurrentUser());
+					dispatch(setLoading(false));
+					return;
+				}
 			}
 
 			try {
-				const user = await getMe();
+				let user;
+				try {
+					user = await getMe();
+				} catch {
+					// Access token expired — refresh once then retry
+					await refreshToken();
+					user = await getMe();
+				}
 				dispatch(
 					setCurrentUser({
 						id: user.id,
@@ -131,6 +143,7 @@ function App() {
 				presenceHub.connect(user.id);
 			} catch (error) {
 				console.error('Auth check failed:', error);
+				clearToken();
 				dispatch(clearCurrentUser());
 			}
 

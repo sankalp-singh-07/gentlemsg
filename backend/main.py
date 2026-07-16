@@ -124,13 +124,30 @@ app.add_exception_handler(
 # Consistent JSON error envelope
 register_exception_handlers(app)
 
-# CORS middleware — restricted methods and headers
+# CORS middleware
+# allow_headers=["*"] avoids Starlette 400 preflight when the browser requests
+# extra headers (e.g. cache-control). Origins still restricted via env.
+_cors_origins = settings.cors_origins_list
+# Local dev: accept both localhost and 127.0.0.1 for the Vite ports
+if not settings.is_production:
+    for extra in (
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ):
+        if extra not in _cors_origins:
+            _cors_origins.append(extra)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Static uploads: public only when explicitly enabled (default true in development)

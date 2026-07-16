@@ -5,7 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import select
 
 from websocket.manager import manager
-from core.security import verify_ws_token
+from websocket.auth import authenticate_websocket
 from db.database import async_session
 from models.group import GroupMember
 
@@ -18,13 +18,8 @@ async def group_websocket(
     group_id: str,
     token: str = Query(default=None),
 ):
-    if not token:
-        await websocket.close(code=4001, reason="Missing authentication token")
-        return
-
-    user = verify_ws_token(token)
+    user = await authenticate_websocket(websocket, token)
     if not user:
-        await websocket.close(code=4001, reason="Invalid or expired token")
         return
 
     async with async_session() as session:

@@ -14,7 +14,7 @@ class ConnectionManager:
         self.user_connections: dict[str, list[WebSocket]] = {}
 
     async def connect_chat(self, chat_id: str, websocket: WebSocket):
-        await websocket.accept()
+        # Socket must already be accepted by the route (auth happens first)
         if chat_id not in self.chat_connections:
             self.chat_connections[chat_id] = []
         self.chat_connections[chat_id].append(websocket)
@@ -27,7 +27,7 @@ class ConnectionManager:
                 del self.chat_connections[chat_id]
 
     async def connect_group(self, group_id: str, websocket: WebSocket):
-        await websocket.accept()
+        # Socket must already be accepted by the route (auth happens first)
         if group_id not in self.group_connections:
             self.group_connections[group_id] = []
         self.group_connections[group_id].append(websocket)
@@ -55,7 +55,7 @@ class ConnectionManager:
                 self.group_connections[group_id].remove(conn)
 
     async def connect_user(self, user_id: str, websocket: WebSocket):
-        await websocket.accept()
+        # Socket must already be accepted by the route (auth happens first)
         if user_id not in self.user_connections:
             self.user_connections[user_id] = []
         self.user_connections[user_id].append(websocket)

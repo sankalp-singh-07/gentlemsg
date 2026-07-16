@@ -13,7 +13,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import select, or_
 
 from websocket.manager import manager
-from core.security import verify_ws_token
+from websocket.auth import authenticate_websocket
 from db.database import async_session
 from models.user import User
 from models.chat import Friendship
@@ -129,13 +129,10 @@ async def presence_websocket(
     user_id: str,
     token: str = Query(default=None),
 ):
-    if not token:
-        await websocket.close(code=4001, reason="Missing authentication token")
-        return
-
-    user = verify_ws_token(token)
-    if not user or user["id"] != user_id:
-        await websocket.close(code=4001, reason="Invalid token or user mismatch")
+    user = await authenticate_websocket(
+        websocket, token, expected_user_id=user_id
+    )
+    if not user:
         return
 
     await manager.connect_user(user_id, websocket)
