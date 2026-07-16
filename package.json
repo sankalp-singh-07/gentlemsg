@@ -1,0 +1,11 @@
+{
+  "name": "gentlemsg-monorepo",
+  "private": true,
+  "description": "Root helpers for GentleMsg portfolio project",
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "lint:frontend": "npm --prefix frontend run lint"
+  }
+}

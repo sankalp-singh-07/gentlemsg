@@ -105,7 +105,7 @@ tags_metadata = [
 app = FastAPI(
     title="GentleMSG API",
     description="Backend API for GentleMSG messaging application.",
-    version="1.1.0",
+    version="1.2.0",
     openapi_tags=tags_metadata,
     lifespan=lifespan,
     contact={
@@ -165,7 +165,7 @@ app.include_router(group_ws.router)
 
 @app.get("/")
 async def root():
-    return {"message": "GentleMSG is running!", "version": "1.1.0"}
+    return {"message": "GentleMSG is running!", "version": "1.2.0"}
 
 
 @app.get("/health")
