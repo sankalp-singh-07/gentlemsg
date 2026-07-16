@@ -9,9 +9,11 @@ import {
 	isSameDay,
 } from '@/shared/lib/messageDisplay';
 import { resolveMediaUrl } from '@/shared/lib/mediaUrl';
-import { Avatar } from '@/shared/ui';
+import { Avatar, MediaLightbox } from '@/shared/ui';
 import { Copy, Reply, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
+
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
 const Messages = ({
 	receiverImg,
@@ -19,6 +21,7 @@ const Messages = ({
 	onReply,
 	onEdit,
 	onDelete,
+	onReact,
 	typingUserId,
 	peerLastReadId,
 	currentUserLastReadId,
@@ -36,6 +39,7 @@ const Messages = ({
 	const bottomRef = useRef(null);
 	const stickToBottom = useRef(true);
 	const [menu, setMenu] = useState(null); // { id, x, y }
+	const [lightbox, setLightbox] = useState(null); // { src, type }
 	const msgRefs = useRef({});
 
 	const scrollToBottom = useCallback((smooth = true) => {
@@ -256,10 +260,10 @@ const Messages = ({
 												alt="media"
 												className="max-w-[220px] rounded-xl cursor-pointer"
 												onClick={() =>
-													window.open(
-														resolveMediaUrl(message.message),
-														'_blank'
-													)
+													setLightbox({
+														src: resolveMediaUrl(message.message),
+														type: 'image',
+													})
 												}
 											/>
 										) : message.type === 'document' ? (
@@ -274,13 +278,40 @@ const Messages = ({
 										) : (
 											<video
 												controls
-												className="max-w-[260px] rounded-xl"
+												className="max-w-[260px] rounded-xl cursor-pointer"
+												onClick={(e) => {
+													e.preventDefault();
+													setLightbox({
+														src: resolveMediaUrl(message.message),
+														type: 'video',
+													});
+												}}
 											>
 												<source
 													src={resolveMediaUrl(message.message)}
 												/>
 											</video>
 										)}
+									</div>
+								)}
+								{/* Reactions */}
+								{message.reactions?.length > 0 && (
+									<div className="flex flex-wrap gap-1 mt-0.5 px-0.5">
+										{message.reactions.map((r) => (
+											<button
+												key={r.emoji}
+												type="button"
+												className={`text-xs px-1.5 py-0.5 rounded-full bg-black/5 hover:bg-black/10 border ${
+													r.userIds?.includes(currentUser.id)
+														? 'border-primary'
+														: 'border-transparent'
+												}`}
+												onClick={() => onReact?.(message, r.emoji)}
+												title={`${r.count}`}
+											>
+												{r.emoji} {r.count > 1 ? r.count : ''}
+											</button>
+										))}
 									</div>
 								)}
 								<span className="meta flex items-center gap-1 text-[11px] text-black/50 mt-0.5 px-1">
@@ -339,10 +370,25 @@ const Messages = ({
 
 			{menu && (
 				<div
-					className="fixed z-50 bg-secondary shadow-lg rounded-lg border border-black/10 py-1 min-w-[140px]"
+					className="fixed z-50 bg-secondary shadow-lg rounded-lg border border-black/10 py-1 min-w-[160px]"
 					style={{ left: menu.x, top: menu.y }}
 					onClick={(e) => e.stopPropagation()}
 				>
+					<div className="flex gap-1 px-2 py-1.5 border-b border-black/5">
+						{QUICK_REACTIONS.map((emoji) => (
+							<button
+								key={emoji}
+								type="button"
+								className="text-base hover:scale-125 transition"
+								onClick={() => {
+									onReact?.(menu.message, emoji);
+									setMenu(null);
+								}}
+							>
+								{emoji}
+							</button>
+						))}
+					</div>
 					<button
 						type="button"
 						className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-black/5 text-left"
@@ -387,6 +433,12 @@ const Messages = ({
 					)}
 				</div>
 			)}
+
+			<MediaLightbox
+				src={lightbox?.src || null}
+				type={lightbox?.type || 'image'}
+				onClose={() => setLightbox(null)}
+			/>
 		</div>
 	);
 };

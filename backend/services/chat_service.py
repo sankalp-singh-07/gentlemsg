@@ -10,8 +10,11 @@ from models.chat import Chat
 from models.message import Message
 from models.user import User
 from models.blocked_user import BlockedUser
+from models.reaction import MessageReaction, ChatPin
 from core.config import settings
 from fastapi import HTTPException
+
+ALLOWED_REACTION_EMOJIS = {"👍", "❤️", "😂", "😮", "😢", "🔥"}
 
 
 async def verify_chat_participant(chat_id: str, user_id: str, db: AsyncSession) -> bool:
@@ -40,6 +43,7 @@ def _message_dict(
     msg: Message,
     chat: Optional[Chat] = None,
     reply_preview: Optional[dict] = None,
+    reactions: Optional[list] = None,
 ) -> dict:
     receiver_id = ""
     if chat:
@@ -56,6 +60,7 @@ def _message_dict(
         "replyToId": msg.reply_to_id,
         "editedAt": msg.edited_at.isoformat() if msg.edited_at else None,
         "replyTo": reply_preview,
+        "reactions": reactions or [],
     }
 
 
@@ -108,6 +113,12 @@ async def get_user_chats(user_id: str, db: AsyncSession) -> list[dict]:
     )
     receivers_map = {u.id: u for u in receiver_result.scalars().all()}
 
+    # Pinned chat ids for this user
+    pins_result = await db.execute(
+        select(ChatPin.chat_id).where(ChatPin.user_id == user_id)
+    )
+    pinned_ids = {row[0] for row in pins_result.all()}
+
     chat_list = []
     for chat in chats:
         receiver_id = chat.user2_id if chat.user1_id == user_id else chat.user1_id
@@ -137,9 +148,14 @@ async def get_user_chats(user_id: str, db: AsyncSession) -> list[dict]:
                 "sentAt": chat.last_message_at.isoformat() if chat.last_message_at else None,
                 "isSeen": is_seen,
                 "lastReadMessageId": last_read_id,
+                "isPinned": chat.id in pinned_ids,
             })
 
-    chat_list.sort(key=lambda x: x.get("sentAt") or "", reverse=True)
+    # Pinned first (True > False with reverse), then newest by sentAt
+    chat_list.sort(
+        key=lambda x: (bool(x.get("isPinned")), x.get("sentAt") or ""),
+        reverse=True,
+    )
     return chat_list
 
 
@@ -217,15 +233,19 @@ async def get_messages(
             messages = list(reversed(result.scalars().all()))
 
     previews = await _reply_previews(messages, db)
+    reactions_map = await _reactions_for_messages([m.id for m in messages], db)
     payload = [
-        _message_dict(m, chat, previews.get(m.reply_to_id) if m.reply_to_id else None)
+        _message_dict(
+            m,
+            chat,
+            previews.get(m.reply_to_id) if m.reply_to_id else None,
+            reactions_map.get(m.id),
+        )
         for m in messages
     ]
 
     last_read = None
     if chat:
-        # last read of the *other* user (for delivery/read receipts on own messages)
-        # and of current viewer is returned separately by mark_read
         last_read = {
             "user1": chat.last_read_message_id_user1,
             "user2": chat.last_read_message_id_user2,
@@ -239,6 +259,113 @@ async def get_messages(
         "hasMore": has_more,
         "lastRead": last_read,
     }
+
+
+async def _reactions_for_messages(
+    message_ids: list[str],
+    db: AsyncSession,
+) -> dict[str, list[dict]]:
+    if not message_ids:
+        return {}
+    result = await db.execute(
+        select(MessageReaction).where(MessageReaction.message_id.in_(message_ids))
+    )
+    rows = list(result.scalars().all())
+    # Aggregate: message_id -> [{ emoji, count, userIds }]
+    raw: dict[str, dict[str, list[str]]] = {}
+    for r in rows:
+        raw.setdefault(r.message_id, {}).setdefault(r.emoji, []).append(r.user_id)
+    out: dict[str, list[dict]] = {}
+    for mid, emojis in raw.items():
+        out[mid] = [
+            {"emoji": emoji, "count": len(uids), "userIds": uids}
+            for emoji, uids in emojis.items()
+        ]
+    return out
+
+
+async def toggle_reaction(
+    chat_id: str,
+    message_id: str,
+    user_id: str,
+    emoji: str,
+    db: AsyncSession,
+) -> dict:
+    """Toggle a reaction. Same emoji again removes; different emoji replaces."""
+    if emoji not in ALLOWED_REACTION_EMOJIS:
+        raise HTTPException(status_code=400, detail="Emoji not allowed")
+    if not await verify_chat_participant(chat_id, user_id, db):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    msg_result = await db.execute(
+        select(Message).where(
+            Message.id == message_id,
+            Message.chat_id == chat_id,
+            Message.is_deleted == False,  # noqa: E712
+        )
+    )
+    if not msg_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    existing = await db.execute(
+        select(MessageReaction).where(
+            MessageReaction.message_id == message_id,
+            MessageReaction.user_id == user_id,
+        )
+    )
+    current = existing.scalar_one_or_none()
+
+    if current and current.emoji == emoji:
+        await db.delete(current)
+        await db.flush()
+        action = "removed"
+    elif current:
+        current.emoji = emoji
+        await db.flush()
+        action = "updated"
+    else:
+        db.add(
+            MessageReaction(message_id=message_id, user_id=user_id, emoji=emoji)
+        )
+        await db.flush()
+        action = "added"
+
+    reactions = (await _reactions_for_messages([message_id], db)).get(message_id, [])
+    return {
+        "messageId": message_id,
+        "action": action,
+        "emoji": emoji,
+        "userId": user_id,
+        "reactions": reactions,
+    }
+
+
+async def pin_chat(user_id: str, chat_id: str, db: AsyncSession) -> dict:
+    if not await verify_chat_participant(chat_id, user_id, db):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    existing = await db.execute(
+        select(ChatPin).where(
+            ChatPin.user_id == user_id, ChatPin.chat_id == chat_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        return {"chatId": chat_id, "isPinned": True}
+    db.add(ChatPin(user_id=user_id, chat_id=chat_id))
+    await db.flush()
+    return {"chatId": chat_id, "isPinned": True}
+
+
+async def unpin_chat(user_id: str, chat_id: str, db: AsyncSession) -> dict:
+    result = await db.execute(
+        select(ChatPin).where(
+            ChatPin.user_id == user_id, ChatPin.chat_id == chat_id
+        )
+    )
+    pin = result.scalar_one_or_none()
+    if pin:
+        await db.delete(pin)
+        await db.flush()
+    return {"chatId": chat_id, "isPinned": False}
 
 
 async def search_messages(

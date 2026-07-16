@@ -22,9 +22,13 @@ from services.chat_service import (
     verify_chat_participant,
     soft_delete_message,
     search_messages,
+    toggle_reaction,
+    pin_chat,
+    unpin_chat,
     _message_dict,
     _reply_previews,
 )
+from pydantic import BaseModel, Field
 from websocket.manager import manager
 from services.user_service import get_user_by_id
 
@@ -338,6 +342,54 @@ async def list_chat_media(
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
     return await get_chat_media(chat_id)
+
+
+class ReactionBody(BaseModel):
+    emoji: str = Field(..., min_length=1, max_length=16)
+
+
+@router.post("/{chat_id}/messages/{message_id}/reactions")
+async def react_to_message(
+    chat_id: str,
+    message_id: str,
+    body: ReactionBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Toggle emoji reaction on a message."""
+    result = await toggle_reaction(
+        chat_id, message_id, current_user["id"], body.emoji, db
+    )
+    await manager.broadcast_to_chat(
+        chat_id,
+        {
+            "event": "reaction_updated",
+            "messageId": message_id,
+            "reactions": result["reactions"],
+            "userId": current_user["id"],
+            "emoji": body.emoji,
+            "action": result["action"],
+        },
+    )
+    return result
+
+
+@router.post("/{chat_id}/pin")
+async def pin_chat_route(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return await pin_chat(current_user["id"], chat_id, db)
+
+
+@router.delete("/{chat_id}/pin")
+async def unpin_chat_route(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return await unpin_chat(current_user["id"], chat_id, db)
 
 
 @router.get("/{chat_id}/files/{filename}")

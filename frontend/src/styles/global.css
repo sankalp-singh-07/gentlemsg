@@ -10,16 +10,29 @@ body {
 	--color-primary: #0077b6;
 	--color-secondary: #0081a7;
 	--color-tertiary: #f4f9ff;
-	--color-tertiary-hover: #f4f9ff;
+	--color-tertiary-hover: #e8f2ff;
 	--color-quatery: #dbebff;
 	--color-black: #01161e;
+	color-scheme: light;
 }
 
 .dark {
-	--color-primary: #0876a1;
-	--color-secondary: #08849a;
-	--color-tertiary: #172b35;
-	--color-tertiary-hover: #8dd2f5;
-	--color-quatery: #273743;
-	--color-black: #f4f9ff;
+	--color-primary: #3a9fd1;
+	--color-secondary: #1a3a4a;
+	--color-tertiary: #0f1c24;
+	--color-tertiary-hover: #1a3040;
+	--color-quatery: #1c2e3a;
+	--color-black: #e8f2ff;
+	color-scheme: dark;
+}
+
+/* Smoother focus for accessibility */
+:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+	background: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }

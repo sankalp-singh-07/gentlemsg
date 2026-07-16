@@ -8,6 +8,9 @@ import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
 import { displayTextMessage, formatDayLabel } from '@/shared/lib/messageDisplay';
 import { Avatar, ChatListSkeleton, EmptyState } from '@/shared/ui';
+import { pinChat, unpinChat } from '@/shared/api/chats';
+import { Pin } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
@@ -29,6 +32,20 @@ const UserChats = () => {
 		}
 	};
 
+	const handleTogglePin = async (e, chat) => {
+		e.stopPropagation();
+		try {
+			if (chat.isPinned) {
+				await unpinChat(chat.chatId);
+			} else {
+				await pinChat(chat.chatId);
+			}
+			dispatch(fetchChats(userId));
+		} catch {
+			toast.error('Could not update pin');
+		}
+	};
+
 	const preview = (message, receiverId, type) => {
 		if (!message) return 'Start Conversation';
 		if (type === 'text') {
@@ -42,6 +59,7 @@ const UserChats = () => {
 	};
 
 	const sortedChats = [...(chats || [])].sort((a, b) => {
+		if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
 		return new Date(b.sentAt || 0) - new Date(a.sentAt || 0);
 	});
 
@@ -107,15 +125,33 @@ const UserChats = () => {
 									</p>
 								</div>
 							</div>
-							<div className="userChatDetails">
+							<div className="userChatDetails flex flex-col items-end gap-1">
 								<div className="text-xs whitespace-nowrap">
 									{chat.sentAt
 										? formatDayLabel(chat.sentAt)
 										: ''}
 								</div>
-								{!chat.isSeen && (
-									<span className="mt-1 inline-block w-2 h-2 rounded-full bg-primary" />
-								)}
+								<div className="flex items-center gap-1">
+									{chat.isPinned && (
+										<Pin
+											size={12}
+											className="text-primary"
+											fill="currentColor"
+										/>
+									)}
+									{!chat.isSeen && (
+										<span className="inline-block w-2 h-2 rounded-full bg-primary" />
+									)}
+									<button
+										type="button"
+										className="text-black/30 hover:text-primary p-0.5"
+										onClick={(e) => handleTogglePin(e, chat)}
+										title={chat.isPinned ? 'Unpin' : 'Pin'}
+										aria-label={chat.isPinned ? 'Unpin' : 'Pin'}
+									>
+										<Pin size={12} />
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>

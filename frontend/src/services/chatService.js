@@ -12,4 +12,7 @@ export {
 	uploadMedia,
 	getMedia,
 	sendTypingIndicator,
+	toggleReaction,
+	pinChat,
+	unpinChat,
 } from '@/shared/api/chats';

@@ -127,3 +127,31 @@ export const sendTypingIndicator = async (chatId: string): Promise<void> => {
 		console.warn('Typing indicator failed:', error);
 	}
 };
+
+export const toggleReaction = async (
+	chatId: string,
+	messageId: string,
+	emoji: string
+) => {
+	const response = await api.post(
+		`/chats/${chatId}/messages/${messageId}/reactions`,
+		{ emoji }
+	);
+	return response.data as {
+		messageId: string;
+		action: string;
+		emoji: string;
+		userId: string;
+		reactions: Array<{ emoji: string; count: number; userIds: string[] }>;
+	};
+};
+
+export const pinChat = async (chatId: string) => {
+	const response = await api.post(`/chats/${chatId}/pin`);
+	return response.data;
+};
+
+export const unpinChat = async (chatId: string) => {
+	const response = await api.delete(`/chats/${chatId}/pin`);
+	return response.data;
+};

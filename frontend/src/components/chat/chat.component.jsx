@@ -23,8 +23,18 @@ import { X, Smile, Paperclip, Send, Search, Phone, Video } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useClickOutside } from '@/shared/hooks/useClickOutside';
 import { useCall } from '@/features/calls';
+import { getDraft, setDraft, clearDraft } from '@/shared/lib/drafts';
 
 const Chat = ({ inMobile }) => {
+	const { chatId, setMessages, messages } = useContext(MessageContext);
+	const { currentUser } = useSelector(selectCurrentUser);
+	const { chats } = useSelector(selectChats);
+	const { blocked } = useSelector(friendSelector);
+	const dispatch = useDispatch();
+	const { isDark } = useContext(DarkModeContext);
+	const navigate = useNavigate();
+	const { startCall } = useCall();
+
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 	const [receiverData, setReceiverData] = useState({});
 	const [text, setText] = useState('');
@@ -41,28 +51,31 @@ const Chat = ({ inMobile }) => {
 	const [searchHits, setSearchHits] = useState([]);
 	const [searchIdx, setSearchIdx] = useState(0);
 	const [highlightId, setHighlightId] = useState(null);
-
-	const { chatId, setMessages, messages } = useContext(MessageContext);
-	const { currentUser } = useSelector(selectCurrentUser);
-	const { chats } = useSelector(selectChats);
-	const { blocked } = useSelector(friendSelector);
-	const dispatch = useDispatch();
-
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [blockText, setBlockText] = useState('');
+	const [files, setFiles] = useState([]);
 
 	const fileInputRef = useRef(null);
-	const [files, setFiles] = useState([]);
-	const { isDark } = useContext(DarkModeContext);
-	const navigate = useNavigate();
 	const textBoxRef = useRef(null);
 	const emojiWrapRef = useRef(null);
 	const typingTimer = useRef(null);
 	const typingExpire = useRef(null);
 	const chatSocketRef = useRef(null);
-	const { startCall } = useCall();
 
 	useClickOutside(emojiWrapRef, () => setEmojiPickerOpen(false), emojiPickerOpen);
+
+	// Load draft when chat changes
+	useEffect(() => {
+		if (!chatId) return;
+		setText(getDraft(chatId));
+	}, [chatId]);
+
+	// Persist draft
+	useEffect(() => {
+		if (!chatId || editing) return;
+		const t = setTimeout(() => setDraft(chatId, text), 300);
+		return () => clearTimeout(t);
+	}, [text, chatId, editing]);
 
 	// Blocked status
 	useEffect(() => {
@@ -219,6 +232,14 @@ const Chat = ({ inMobile }) => {
 						if (event.userId !== currentUser?.id) {
 							setPeerLastReadId(event.lastReadMessageId);
 						}
+					} else if (event.event === 'reaction_updated') {
+						setMessages((prev) => ({
+							messages: (prev?.messages || []).map((m) =>
+								m.id === event.messageId
+									? { ...m, reactions: event.reactions || [] }
+									: m
+							),
+						}));
 					}
 				});
 				chatSocketRef.current = socket;
@@ -318,6 +339,7 @@ const Chat = ({ inMobile }) => {
 			messages: [...(prev?.messages || []), optimistic],
 		}));
 		setText('');
+		clearDraft(chatId);
 		const replySnapshot = replyTo;
 		setReplyTo(null);
 
@@ -388,6 +410,26 @@ const Chat = ({ inMobile }) => {
 		setReplyTo(message);
 		setEditing(null);
 		textBoxRef.current?.focus();
+	};
+
+	const handleReact = async (message, emoji) => {
+		if (!message?.id || !chatId) return;
+		try {
+			const result = await chatService.toggleReaction(
+				chatId,
+				message.id,
+				emoji
+			);
+			setMessages((prev) => ({
+				messages: (prev?.messages || []).map((m) =>
+					m.id === message.id
+						? { ...m, reactions: result.reactions || [] }
+						: m
+				),
+			}));
+		} catch {
+			toast.error('Could not react');
+		}
 	};
 
 	const loadOlder = async () => {
@@ -599,6 +641,7 @@ const Chat = ({ inMobile }) => {
 				onReply={handleReply}
 				onEdit={handleEdit}
 				onDelete={handleDelete}
+				onReact={handleReact}
 				typingUserId={typingUserId}
 				peerLastReadId={peerLastReadId}
 				currentUserLastReadId={myLastReadId}

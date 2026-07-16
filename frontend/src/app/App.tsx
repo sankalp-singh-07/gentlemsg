@@ -15,6 +15,7 @@ import { presenceHub } from '@/shared/ws/presenceHub';
 import { fetchChats } from '@/store/chats/chats.reducer';
 import { getInitialData } from '@/store/thunks/thunks';
 import type { AppDispatch } from '@/store/store';
+import { ConnectionBanner } from '@/shared/ui';
 
 function App() {
 	const dispatch = useDispatch<AppDispatch>();
@@ -112,6 +113,7 @@ function App() {
 
 	return (
 		<>
+			<ConnectionBanner />
 			<Router />
 			<ToastContainer position="top-right" newestOnTop closeOnClick />
 		</>

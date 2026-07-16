@@ -26,6 +26,8 @@ export interface ChatListItem {
 	type: MessageType;
 	sentAt: string | null;
 	isSeen: boolean;
+	isPinned?: boolean;
+	lastReadMessageId?: string | null;
 }
 
 export interface Chat {
@@ -50,6 +52,12 @@ export interface ReplyPreview {
 	isDeleted?: boolean;
 }
 
+export interface MessageReaction {
+	emoji: string;
+	count: number;
+	userIds: string[];
+}
+
 export interface ChatMessage {
 	id: string;
 	senderId: string;
@@ -60,6 +68,7 @@ export interface ChatMessage {
 	replyToId?: string | null;
 	editedAt?: string | null;
 	replyTo?: ReplyPreview | null;
+	reactions?: MessageReaction[];
 	/** Client-only status for optimistic UI */
 	status?: 'sending' | 'sent' | 'failed';
 	tempId?: string;
