@@ -16,6 +16,7 @@ import {
 } from '@/shared/lib/recentSearch';
 import { Search, X } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { previewLastMessage } from '@/shared/lib/messageDisplay';
 
 const GlobalSearch = () => {
 	const [open, setOpen] = useState(false);
@@ -198,10 +199,14 @@ const GlobalSearch = () => {
 											<div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
 												<Users size={18} />
 											</div>
-											<div className="min-w-0">
-												<p className="font-medium truncate">{g.name}</p>
-												<p className="text-xs text-black/50 truncate">
-													{g.lastMessage}
+											<div className="min-w-0 text-left">
+												<p className="font-medium truncate text-black text-left">{g.name}</p>
+												<p className="text-xs text-black/50 truncate text-left">
+													{previewLastMessage(
+														g.lastMessage,
+														'text',
+														currentUser?.id
+													)}
 												</p>
 											</div>
 										</button>
@@ -225,12 +230,17 @@ const GlobalSearch = () => {
 												alt={c.receiverName}
 												size={40}
 											/>
-											<div className="min-w-0">
-												<p className="font-medium truncate">
+											<div className="min-w-0 text-left">
+												<p className="font-medium truncate text-black text-left">
 													{c.receiverName}
 												</p>
-												<p className="text-xs text-black/50 truncate">
-													{c.lastMessage}
+												<p className="text-xs text-black/50 truncate text-left">
+													{previewLastMessage(
+														c.lastMessage,
+														c.type,
+														currentUser?.id,
+														c.receiverId
+													)}
 												</p>
 											</div>
 										</button>

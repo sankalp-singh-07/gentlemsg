@@ -71,23 +71,25 @@ const FAQ = () => {
 					))}
 				</div>
 				<div className="text-center mt-16">
-					<p className="text-black/70 text-sm">
+					<p className="text-black/70 text-sm mb-4">
 						If issues persist, reach out through the contact form.
 					</p>
-					<button
-						type="button"
-						className="bg-black text-white font-medium py-2 px-4 mt-3 rounded-md mx-2"
-						onClick={() => navigate('/contact-us')}
-					>
-						Contact Us
-					</button>
-					<button
-						type="button"
-						className="bg-primary text-white py-2 px-4 mt-3 rounded-md mx-2"
-						onClick={() => navigate('/admin')}
-					>
-						Back home
-					</button>
+					<div className="flex flex-wrap items-center justify-center gap-3">
+						<button
+							type="button"
+							className="font-medium py-2.5 px-5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 shadow-sm"
+							onClick={() => navigate('/contact-us')}
+						>
+							Contact Us
+						</button>
+						<button
+							type="button"
+							className="font-medium py-2.5 px-5 rounded-lg bg-primary text-white hover:opacity-90 shadow-sm"
+							onClick={() => navigate('/admin')}
+						>
+							Back home
+						</button>
+					</div>
 				</div>
 			</div>
 		</section>

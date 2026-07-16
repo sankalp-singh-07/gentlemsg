@@ -113,21 +113,31 @@ const SearchFriends = ({ onClose }) => {
 	};
 
 	return (
-		<div className="bg-secondary rounded-xl absolute top-16 left-2 right-2 sm:left-4 sm:right-auto sm:w-96 p-4 z-30 shadow-xl max-h-[70vh] overflow-auto">
+		<div
+			className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+			onClick={onClose}
+			role="presentation"
+		>
+		<div
+			className="bg-secondary rounded-xl w-full max-w-md p-4 shadow-2xl max-h-[75vh] overflow-auto text-left"
+			onClick={(e) => e.stopPropagation()}
+			role="dialog"
+			aria-label="Add friends"
+		>
 			<div className="flex gap-2 items-center mb-3">
 				<input
 					type="text"
 					placeholder="Search by name or username"
 					value={searchTerm}
 					onChange={(e) => setSearchTerm(e.target.value)}
-					className="bg-tertiary p-2 rounded-md w-full h-10 placeholder:text-sm focus:outline-none"
+					className="bg-tertiary text-black p-2 rounded-md w-full h-10 placeholder:text-sm focus:outline-none border border-black/10"
 					aria-label="Search users"
 					autoFocus
 				/>
 				{onClose && (
 					<button
 						type="button"
-						className="text-sm px-2 py-1 text-black/60 hover:text-black"
+						className="text-sm px-2 py-1 text-black/70 hover:text-black shrink-0"
 						onClick={onClose}
 					>
 						Close
@@ -210,12 +220,12 @@ const SearchFriends = ({ onClose }) => {
 										<span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-secondary" />
 									)}
 								</div>
-								<div className="min-w-0">
-									<h4 className="text-tertiary font-medium truncate">
+								<div className="min-w-0 text-left">
+									<h4 className="text-black font-medium truncate text-left">
 										{user.name}
 									</h4>
 									{user.userName && (
-										<p className="text-xs text-black/50 truncate">
+										<p className="text-xs text-black/50 truncate text-left">
 											@{user.userName}
 										</p>
 									)}
@@ -234,6 +244,7 @@ const SearchFriends = ({ onClose }) => {
 						</div>
 					);
 				})}
+		</div>
 		</div>
 	);
 };

@@ -1,9 +1,9 @@
 .chat {
-    @apply flex-grow-[3] md:flex-grow-[11] lg:flex-grow-[3] flex-shrink basis-0 bg-tertiary h-screen w-full flex flex-col;
+    @apply flex-grow-[3] md:flex-grow-[11] lg:flex-grow-[3] flex-shrink basis-0 bg-tertiary h-screen w-full flex flex-col min-h-0 min-w-0;
 }
 
 .userDetails {
-    @apply flex items-center justify-between h-full w-fit gap-2;
+    @apply flex items-center h-full w-fit gap-2 min-w-0;
 }
 
 .currentStatus {
@@ -15,11 +15,12 @@
 }
 
 .icons {
-    @apply flex items-center h-full w-auto;
+    @apply flex items-center h-full w-auto shrink-0 gap-0.5 sm:gap-1;
 }
 
 .bottom {
-    @apply flex items-center justify-between w-full px-3 sm:px-6 pb-3 pt-1 shrink-0;
+    @apply flex items-center justify-between w-full px-2 sm:px-4 pb-3 pt-1 shrink-0 bg-tertiary;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .inputContainer {
@@ -27,7 +28,7 @@
 }
 
 .inputEl {
-    @apply flex-1 flex items-center justify-between min-h-[3rem] px-2 sm:px-3 bg-quatery rounded-2xl;
+    @apply flex-1 flex items-center justify-between min-h-[3rem] px-2 sm:px-3 bg-quatery rounded-2xl min-w-0;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -40,27 +41,57 @@
 }
 
 .middle {
-    @apply flex flex-1 justify-normal w-full pr-4 pl-2 sm:pr-8 sm:pl-4 flex-col overflow-y-auto gap-1 py-2 scroll-smooth min-h-0;
+    @apply flex flex-1 justify-normal w-full pr-3 pl-2 sm:pr-6 sm:pl-4 flex-col overflow-y-auto gap-1 py-2 scroll-smooth min-h-0;
 }
 
+/* Bubbles can use most of the pane; short text still shrinks via inline-block */
 .message {
-    @apply flex h-fit max-w-[85%] sm:max-w-[75%] md:max-w-[60%] lg:max-w-[50%];
+    @apply flex h-fit max-w-[min(100%,42rem)] w-fit items-end;
+}
+
+@media (min-width: 640px) {
+    .message {
+        max-width: min(92%, 40rem);
+    }
+}
+
+@media (min-width: 1024px) {
+    .message {
+        max-width: min(78%, 44rem);
+    }
+}
+
+/* Others: left side of the pane */
+.message:not(.own) {
+    @apply self-start flex-row mr-auto;
+}
+
+/* Current user: right side of the pane */
+.own {
+    @apply self-end flex-row-reverse ml-auto;
 }
 
 .texts {
-    @apply flex flex-col gap-0.5 w-full;
+    @apply flex flex-col gap-0.5 w-auto max-w-full min-w-0;
 }
 
+/* Text inside every bubble is left-aligned for readability */
 .textContent {
-    @apply px-3 py-2 rounded-2xl bg-quatery text-black inline-block whitespace-pre-wrap break-words shadow-sm;
+    @apply px-3.5 py-2 rounded-2xl bg-quatery text-black inline-block whitespace-pre-wrap break-words shadow-sm text-left max-w-full;
+    text-align: left;
+    word-break: break-word;
 }
 
-.own {
-    @apply flex self-end;
+.own .texts {
+    @apply items-end;
 }
 
 .own .textContent {
-    @apply bg-primary text-tertiary rounded-br-md;
+    @apply bg-primary text-white rounded-br-md;
+}
+
+.message:not(.own) .texts {
+    @apply items-start;
 }
 
 .message:not(.own) .textContent {
@@ -72,6 +103,10 @@
     background: rgba(0, 0, 0, 0.05);
 }
 
+.dark .reply-bar {
+    background: rgba(255, 255, 255, 0.06);
+}
+
 .typing-dots {
     @apply inline-flex gap-0.5 items-center;
 }
@@ -80,6 +115,10 @@
     @apply w-1.5 h-1.5 rounded-full animate-bounce;
     background: rgba(0, 0, 0, 0.4);
     animation-duration: 0.9s;
+}
+
+.dark .typing-dots span {
+    background: rgba(255, 255, 255, 0.45);
 }
 
 .typing-dots span:nth-child(2) {
@@ -93,4 +132,19 @@
 .drop-overlay {
     @apply absolute inset-0 z-20 flex items-center justify-center rounded-lg pointer-events-none border-2 border-dashed border-primary;
     background: rgba(59, 130, 246, 0.15);
+}
+
+.chat-messages-wrap {
+    @apply flex-1 min-h-0 relative flex flex-col;
+}
+
+.chat-search-bar {
+    @apply shrink-0;
+}
+
+/* Mobile full-screen chat */
+@media (max-width: 650px) {
+    .chat {
+        @apply max-w-full w-full;
+    }
 }

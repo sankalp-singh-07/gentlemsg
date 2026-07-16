@@ -23,5 +23,9 @@
 }
 
 .sub-heading {
-	@apply font-medium text-black text-lg mb-6 sm:mb-10;
+	@apply font-medium text-black text-lg mb-6 sm:mb-10 text-center max-w-3xl mx-auto;
+}
+
+.home-cta {
+	@apply flex w-full justify-center items-center px-4 mb-6 sm:mb-8;
 }

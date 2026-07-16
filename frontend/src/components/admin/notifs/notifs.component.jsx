@@ -75,19 +75,19 @@ const Notifs = () => {
 				{notifications.map((notif, index) => (
 					<div
 						key={notif.id || index}
-						className="flex bg-tertiary px-3 py-2 justify-between items-center gap-2 rounded-lg w-full"
+						className="flex bg-tertiary px-3 py-2.5 justify-between items-start gap-3 rounded-lg w-full text-left"
 					>
-						<div className="flex items-center gap-3 min-w-0 flex-1">
+						<div className="flex items-start gap-3 min-w-0 flex-1 text-left">
 							<Avatar
 								src={notif.photoURL}
 								alt={notif.userName || 'User'}
 								size={40}
 							/>
-							<div className="min-w-0">
-								<p className="text-sm text-black truncate">
+							<div className="min-w-0 flex-1 text-left">
+								<p className="text-sm text-black text-left leading-snug break-words">
 									{messageGen(notif)}
 								</p>
-								<p className="text-xs text-black/50">
+								<p className="text-xs text-black/50 text-left mt-1">
 									{getDate(notif.createdAt)}
 								</p>
 							</div>

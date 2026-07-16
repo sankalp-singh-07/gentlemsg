@@ -88,13 +88,14 @@ const Sidebar = () => {
 				</div>
 
 				{tab === 'groups' && (
-					<div className="px-2 mb-1">
+					<div className="px-2 mb-2">
 						<button
 							type="button"
-							className="w-full text-xs flex items-center justify-center gap-1 py-1.5 rounded-md bg-quatery text-black hover:bg-primary hover:text-white transition"
+							className="w-full text-sm font-semibold flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white shadow-md hover:opacity-90 active:scale-[0.98] transition border border-primary"
 							onClick={() => setCreateGroupOpen(true)}
 						>
-							<Users size={14} /> New group
+							<Users size={16} strokeWidth={2.25} />
+							New group
 						</button>
 					</div>
 				)}
@@ -128,12 +129,12 @@ const Sidebar = () => {
 							accept="image/*"
 						/>
 					</button>
-					<div className="userProfileInfo min-w-0">
-						<h1 className="text-base font-medium text-black truncate">
+					<div className="userProfileInfo min-w-0 flex-1 text-left">
+						<p className="text-sm sm:text-base font-semibold text-black truncate text-left leading-tight">
 							{currentUser?.name}
-						</h1>
+						</p>
 						{currentUser?.userName && (
-							<p className="text-xs text-black/50 truncate">
+							<p className="text-xs text-black/55 truncate text-left leading-tight mt-0.5">
 								@{currentUser.userName}
 							</p>
 						)}

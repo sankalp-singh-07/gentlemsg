@@ -1,3 +1,10 @@
 .dashboard {
-    @apply flex items-center justify-between h-full w-full;
+    @apply flex items-stretch h-screen w-full overflow-hidden;
+}
+
+/* Mobile: sidebar full width until chat opens via /chat route */
+@media (max-width: 650px) {
+    .dashboard {
+        @apply flex-col;
+    }
 }

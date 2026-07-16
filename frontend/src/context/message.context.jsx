@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback } from 'react';
+import { createContext, useState, useCallback, useRef } from 'react';
 
 export const MessageContext = createContext({
 	messages: { messages: [] },
@@ -19,11 +19,22 @@ export const MessageProvider = ({ children }) => {
 		() => localStorage.getItem('gentlemsg_groupId') || ''
 	);
 
+	// Track latest ids so setChatId/setGroupId can no-op on same selection
+	// (re-clicking an open chat used to clear messages without re-fetching).
+	const chatIdRef = useRef(chatId);
+	const groupIdRef = useRef(groupId);
+	chatIdRef.current = chatId;
+	groupIdRef.current = groupId;
+
 	const setChatId = useCallback((id) => {
-		setChatIdBase(id || '');
-		if (id) {
-			localStorage.setItem('gentlemsg_chatId', id);
+		const next = id || '';
+		if (chatIdRef.current === next) return;
+		chatIdRef.current = next;
+		setChatIdBase(next);
+		if (next) {
+			localStorage.setItem('gentlemsg_chatId', next);
 			// exclusive conversation mode
+			groupIdRef.current = '';
 			setGroupIdBase('');
 			localStorage.removeItem('gentlemsg_groupId');
 			setMessages({ messages: [] });
@@ -33,9 +44,13 @@ export const MessageProvider = ({ children }) => {
 	}, []);
 
 	const setGroupId = useCallback((id) => {
-		setGroupIdBase(id || '');
-		if (id) {
-			localStorage.setItem('gentlemsg_groupId', id);
+		const next = id || '';
+		if (groupIdRef.current === next) return;
+		groupIdRef.current = next;
+		setGroupIdBase(next);
+		if (next) {
+			localStorage.setItem('gentlemsg_groupId', next);
+			chatIdRef.current = '';
 			setChatIdBase('');
 			localStorage.removeItem('gentlemsg_chatId');
 			setMessages({ messages: [] });
@@ -45,6 +60,8 @@ export const MessageProvider = ({ children }) => {
 	}, []);
 
 	const clearConversation = useCallback(() => {
+		chatIdRef.current = '';
+		groupIdRef.current = '';
 		setChatIdBase('');
 		setGroupIdBase('');
 		localStorage.removeItem('gentlemsg_chatId');

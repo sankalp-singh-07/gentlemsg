@@ -10,10 +10,59 @@ import {
 } from '@/shared/lib/messageDisplay';
 import { resolveMediaUrl } from '@/shared/lib/mediaUrl';
 import { Avatar, MediaLightbox } from '@/shared/ui';
-import { Copy, Reply, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
+import {
+	Copy,
+	Reply,
+	Pencil,
+	Trash2,
+	Check,
+	CheckCheck,
+	FileText,
+	Phone,
+	PhoneMissed,
+	PhoneOff,
+	Video,
+} from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+function parseCallPayload(raw) {
+	try {
+		return typeof raw === 'string' ? JSON.parse(raw) : raw;
+	} catch {
+		return null;
+	}
+}
+
+function formatCallDuration(secs) {
+	const n = Math.max(0, Number(secs) || 0);
+	const m = Math.floor(n / 60);
+	const s = n % 60;
+	return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function callLogLabel(payload, currentUserId) {
+	if (!payload) return 'Call';
+	const isVideo = payload.callType === 'video';
+	const kind = isVideo ? 'Video' : 'Voice';
+	const iAmCaller = payload.callerId === currentUserId;
+	const status = payload.status || 'ended';
+
+	if (status === 'missed') {
+		return iAmCaller ? `No answer · ${kind.toLowerCase()} call` : `Missed ${kind.toLowerCase()} call`;
+	}
+	if (status === 'rejected') {
+		return iAmCaller ? `${kind} call declined` : `You declined ${kind.toLowerCase()} call`;
+	}
+	if (status === 'ended') {
+		const d = payload.durationSeconds || 0;
+		return d > 0
+			? `${kind} call · ${formatCallDuration(d)}`
+			: `${kind} call ended`;
+	}
+	return `${kind} call`;
+}
 
 const Messages = ({
 	receiverImg,
@@ -38,6 +87,7 @@ const Messages = ({
 	const containerRef = useRef(null);
 	const bottomRef = useRef(null);
 	const stickToBottom = useRef(true);
+	const [showJump, setShowJump] = useState(false);
 	const [menu, setMenu] = useState(null); // { id, x, y }
 	const [lightbox, setLightbox] = useState(null); // { src, type }
 	const msgRefs = useRef({});
@@ -46,6 +96,8 @@ const Messages = ({
 		bottomRef.current?.scrollIntoView({
 			behavior: smooth ? 'smooth' : 'auto',
 		});
+		stickToBottom.current = true;
+		setShowJump(false);
 	}, []);
 
 	useEffect(() => {
@@ -59,6 +111,7 @@ const Messages = ({
 		const el = msgRefs.current[highlightMessageId];
 		if (el) {
 			stickToBottom.current = false;
+			setShowJump(true);
 			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		}
 	}, [highlightMessageId]);
@@ -87,7 +140,9 @@ const Messages = ({
 		const el = containerRef.current;
 		if (!el) return;
 		const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-		stickToBottom.current = distFromBottom < 80;
+		const nearBottom = distFromBottom < 100;
+		stickToBottom.current = nearBottom;
+		setShowJump(!nearBottom && messagesArr.length > 0);
 
 		if (el.scrollTop < 40 && hasMore && !loadingOlder && onLoadOlder) {
 			const prevHeight = el.scrollHeight;
@@ -150,9 +205,10 @@ const Messages = ({
 	}
 
 	return (
+		<div className="relative flex-1 min-h-0 flex flex-col">
 		<div
 			ref={containerRef}
-			className="middle scrollbar-hide relative"
+			className="middle scrollbar-hide flex-1 min-h-0"
 			onScroll={handleScroll}
 		>
 			{loadingOlder && (
@@ -166,6 +222,14 @@ const Messages = ({
 				>
 					Load older messages
 				</button>
+			)}
+
+			{!messagesArr.length && (
+				<div className="flex-1 flex items-center justify-center py-16 px-4">
+					<p className="text-sm text-black/45 text-center">
+						No messages yet. Say hello!
+					</p>
+				</div>
 			)}
 
 			{messagesArr.map((message, index) => {
@@ -193,8 +257,57 @@ const Messages = ({
 
 				const isHighlight = highlightMessageId === message.id;
 
+				// Centered system call log (not a bubble)
+				if (message.type === 'call') {
+					const payload = parseCallPayload(message.message);
+					const label = callLogLabel(payload, currentUser.id);
+					const isMissed = payload?.status === 'missed';
+					const isRejected = payload?.status === 'rejected';
+					const isVideo = payload?.callType === 'video';
+					const Icon = isMissed
+						? PhoneMissed
+						: isRejected
+							? PhoneOff
+							: isVideo
+								? Video
+								: Phone;
+					return (
+						<div
+							className="w-full"
+							key={message.id || message.tempId}
+							ref={(el) => {
+								if (message.id) msgRefs.current[message.id] = el;
+							}}
+						>
+							{showDay && (
+								<div className="flex justify-center my-3">
+									<span className="text-xs bg-black/10 text-black/70 px-3 py-1 rounded-full">
+										{formatDayLabel(message.sentAt)}
+									</span>
+								</div>
+							)}
+							<div className="flex justify-center my-2 px-2">
+								<div
+									className={`inline-flex items-center gap-2 text-xs sm:text-sm px-3.5 py-1.5 rounded-full border shadow-sm font-medium ${
+										isMissed || isRejected
+											? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+											: 'bg-quatery text-black border-black/10'
+									}`}
+								>
+									<Icon size={14} className="shrink-0" />
+									<span>{label}</span>
+									<span className="opacity-70 font-normal">
+										{formatMessageTime(message.sentAt)}
+									</span>
+								</div>
+							</div>
+						</div>
+					);
+				}
+
 				return (
 					<div
+						className="w-full"
 						key={message.id || message.tempId}
 						ref={(el) => {
 							if (message.id) msgRefs.current[message.id] = el;
@@ -271,9 +384,33 @@ const Messages = ({
 												href={resolveMediaUrl(message.message)}
 												target="_blank"
 												rel="noopener noreferrer"
-												className="inline-block bg-primary text-tertiary px-3 py-2 rounded-lg text-sm"
+												className={`inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-md border transition-opacity hover:opacity-90 ${
+													isOwn
+														? 'bg-primary text-white border-primary/80'
+														: 'bg-secondary text-black border-black/15'
+												}`}
 											>
-												View document
+												<span
+													className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 ${
+														isOwn
+															? 'bg-white/20 text-white'
+															: 'bg-primary/15 text-primary'
+													}`}
+												>
+													<FileText size={18} strokeWidth={2} />
+												</span>
+												<span className="text-left leading-tight">
+													<span className="block">Document</span>
+													<span
+														className={`block text-[11px] font-normal ${
+															isOwn
+																? 'text-white/85'
+																: 'text-black/60'
+														}`}
+													>
+														Tap to open PDF
+													</span>
+												</span>
 											</a>
 										) : (
 											<video
@@ -354,15 +491,13 @@ const Messages = ({
 			)}
 
 			<div ref={bottomRef} />
+		</div>
 
-			{!stickToBottom.current && messagesArr.length > 0 && (
+			{showJump && (
 				<button
 					type="button"
-					className="sticky bottom-2 left-1/2 -translate-x-1/2 bg-primary text-white text-xs px-3 py-1.5 rounded-full shadow z-10"
-					onClick={() => {
-						stickToBottom.current = true;
-						scrollToBottom(true);
-					}}
+					className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-primary text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg hover:opacity-90 whitespace-nowrap"
+					onClick={() => scrollToBottom(true)}
 				>
 					Jump to latest
 				</button>

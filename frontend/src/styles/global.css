@@ -2,7 +2,9 @@ body {
     @apply font-sans;
     background-color: var(--color-tertiary);
     font-family: 'Inter', sans-serif;
-    text-align: center;
+    /* Do not center the whole app — breaks chat list, profile, notifications */
+    text-align: left;
+    color: var(--color-black);
 }
 
 

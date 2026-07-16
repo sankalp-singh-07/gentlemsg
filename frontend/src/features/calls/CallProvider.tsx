@@ -283,10 +283,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
 				case 'call_end':
 				case 'call_peer_unavailable': {
 					if (event.callId && s.callId && event.callId !== s.callId) return;
-					if (type === 'call_reject') toast.info('Call declined');
-					if (type === 'call_busy') toast.info('User is busy');
-					if (type === 'call_peer_unavailable')
-						toast.info('User may be offline');
+					const callKey = String(event.callId || s.callId || '');
+					if (type === 'call_reject') {
+						toast.info('Call declined', {
+							toastId: `call_reject-${callKey}`,
+						});
+					}
+					if (type === 'call_busy') {
+						toast.info('User is busy', {
+							toastId: `call_busy-${callKey}`,
+						});
+					}
+					if (type === 'call_peer_unavailable') {
+						toast.info('User may be offline', {
+							toastId: `call_unavail-${callKey}`,
+						});
+					}
 					cleanup();
 					break;
 				}

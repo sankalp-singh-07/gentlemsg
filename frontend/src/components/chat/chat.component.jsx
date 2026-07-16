@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import React, {
+	useState,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useCallback,
+	useContext,
+} from 'react';
 import './chat.css';
 import Messages from './childComponents/messages.component';
 import EmojiPicker from 'emoji-picker-react';
@@ -26,7 +33,8 @@ import { useCall } from '@/features/calls';
 import { getDraft, setDraft, clearDraft } from '@/shared/lib/drafts';
 
 const Chat = ({ inMobile }) => {
-	const { chatId, setMessages, messages } = useContext(MessageContext);
+	const { chatId, setMessages, messages, clearConversation } =
+		useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
 	const { chats } = useSelector(selectChats);
 	const { blocked } = useSelector(friendSelector);
@@ -54,6 +62,9 @@ const Chat = ({ inMobile }) => {
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [blockText, setBlockText] = useState('');
 	const [files, setFiles] = useState([]);
+	const [messagesLoading, setMessagesLoading] = useState(false);
+	const [messagesError, setMessagesError] = useState(null);
+	const [reloadKey, setReloadKey] = useState(0);
 
 	const fileInputRef = useRef(null);
 	const textBoxRef = useRef(null);
@@ -61,6 +72,7 @@ const Chat = ({ inMobile }) => {
 	const typingTimer = useRef(null);
 	const typingExpire = useRef(null);
 	const chatSocketRef = useRef(null);
+	const loadSeqRef = useRef(0);
 
 	useClickOutside(emojiWrapRef, () => setEmojiPickerOpen(false), emojiPickerOpen);
 
@@ -155,20 +167,38 @@ const Chat = ({ inMobile }) => {
 	);
 
 	// Load messages + WS
+	// Depend on currentUser?.id (not whole object) to avoid cancel/refetch races.
+	const currentUserId = currentUser?.id;
+
+	// Show loading immediately when chat switches (before paint) to avoid empty flash
+	useLayoutEffect(() => {
+		if (!chatId) return;
+		setMessagesLoading(true);
+		setMessagesError(null);
+		setReplyTo(null);
+		setEditing(null);
+		setHasMore(false);
+		setPeerLastReadId(null);
+		setMyLastReadId(null);
+		setTypingUserId(null);
+	}, [chatId, reloadKey]);
+
 	useEffect(() => {
 		if (!chatId) return;
 		let cancelled = false;
+		const seq = ++loadSeqRef.current;
 
 		const fetchAndConnect = async () => {
 			try {
 				const data = await chatService.getMessages(chatId, { limit: 50 });
-				if (cancelled) return;
+				if (cancelled || seq !== loadSeqRef.current) return;
 				setMessages({ messages: data.messages || [] });
 				setHasMore(Boolean(data.hasMore));
+				setMessagesLoading(false);
 
 				const lastRead = data.lastRead;
-				if (lastRead && currentUser) {
-					if (lastRead.user1Id === currentUser.id) {
+				if (lastRead && currentUserId) {
+					if (lastRead.user1Id === currentUserId) {
 						setMyLastReadId(lastRead.user1);
 						setPeerLastReadId(lastRead.user2);
 					} else {
@@ -179,8 +209,12 @@ const Chat = ({ inMobile }) => {
 
 				const msgs = data.messages || [];
 				const lastId = msgs.length ? msgs[msgs.length - 1].id : null;
-				await chatService.markAsRead(chatId, lastId);
-				if (cancelled) return;
+				try {
+					await chatService.markAsRead(chatId, lastId);
+				} catch {
+					/* non-fatal */
+				}
+				if (cancelled || seq !== loadSeqRef.current) return;
 				dispatch(markChatAsRead(chatId));
 				if (lastId) setMyLastReadId(lastId);
 
@@ -197,7 +231,7 @@ const Chat = ({ inMobile }) => {
 							replyTo: event.replyTo,
 						});
 						// Mark read if from peer and chat is open
-						if (event.senderId !== currentUser?.id) {
+						if (event.senderId !== currentUserId) {
 							chatService.markAsRead(chatId, event.id);
 							setMyLastReadId(event.id);
 						}
@@ -220,7 +254,7 @@ const Chat = ({ inMobile }) => {
 							),
 						}));
 					} else if (event.event === 'typing') {
-						if (event.userId !== currentUser?.id) {
+						if (event.userId !== currentUserId) {
 							setTypingUserId(event.userId);
 							if (typingExpire.current) clearTimeout(typingExpire.current);
 							typingExpire.current = setTimeout(
@@ -229,7 +263,7 @@ const Chat = ({ inMobile }) => {
 							);
 						}
 					} else if (event.event === 'messages_read') {
-						if (event.userId !== currentUser?.id) {
+						if (event.userId !== currentUserId) {
 							setPeerLastReadId(event.lastReadMessageId);
 						}
 					} else if (event.event === 'reaction_updated') {
@@ -243,23 +277,40 @@ const Chat = ({ inMobile }) => {
 					}
 				});
 				chatSocketRef.current = socket;
-				if (cancelled) socket?.close?.();
+				if (cancelled || seq !== loadSeqRef.current) socket?.close?.();
 			} catch (error) {
-				if (!cancelled) console.error('Error fetching messages:', error);
+				if (!cancelled && seq === loadSeqRef.current) {
+					console.error('Error fetching messages:', error);
+					const status = error?.response?.status;
+					// Stale/foreign chat — leave the pane instead of a permanent error
+					if (status === 403 || status === 404) {
+						clearConversation();
+						return;
+					}
+					setMessagesLoading(false);
+					setMessagesError('Could not load messages. Try again.');
+					setMessages({ messages: [] });
+				}
 			}
 		};
 
 		fetchAndConnect();
-		setReplyTo(null);
-		setEditing(null);
-		setText('');
 
 		return () => {
 			cancelled = true;
 			chatSocketRef.current?.close?.();
+			chatSocketRef.current = null;
 			if (typingExpire.current) clearTimeout(typingExpire.current);
 		};
-	}, [chatId, setMessages, dispatch, currentUser, upsertMessage]);
+	}, [
+		chatId,
+		setMessages,
+		dispatch,
+		currentUserId,
+		upsertMessage,
+		reloadKey,
+		clearConversation,
+	]);
 
 	useEffect(() => {
 		if (!isUserBlocked) textBoxRef.current?.focus();
@@ -456,21 +507,49 @@ const Chat = ({ inMobile }) => {
 	};
 
 	const handleSearch = async () => {
-		if (searchQ.trim().length < 2) return;
+		const q = searchQ.trim();
+		if (q.length < 2) return;
+		const qLower = q.toLowerCase();
+
+		// 1) Server search (plain-text messages in DB)
+		let serverHits = [];
 		try {
-			const res = await chatService.searchChatMessages(chatId, searchQ.trim());
-			const hits = res.messages || [];
-			// oldest → newest for natural navigation
-			const ordered = [...hits].reverse();
-			setSearchHits(ordered);
-			setSearchIdx(0);
-			if (ordered.length) setHighlightId(ordered[0].id);
-			else {
-				setHighlightId(null);
-				toast.info('No matches');
-			}
-		} catch {
-			toast.error('Search failed');
+			const res = await chatService.searchChatMessages(chatId, q);
+			serverHits = res.messages || [];
+		} catch (e) {
+			console.warn('Server search failed, using local only', e);
+		}
+
+		// 2) Local search on loaded messages (handles legacy encrypted display text)
+		const localHits = (messages?.messages || []).filter((m) => {
+			if (m.type && m.type !== 'text') return false;
+			const text = displayTextMessage(
+				m.message,
+				currentUser?.id,
+				receiverData?.id
+			);
+			return (text || '').toLowerCase().includes(qLower);
+		});
+
+		// 3) Merge by id (local first so display fields are complete)
+		const map = new Map();
+		[...serverHits, ...localHits].forEach((m) => {
+			if (m?.id) map.set(m.id, m);
+		});
+		// Chronological for prev/next
+		const ordered = [...map.values()].sort((a, b) => {
+			const ta = new Date(a.sentAt || 0).getTime();
+			const tb = new Date(b.sentAt || 0).getTime();
+			return ta - tb;
+		});
+
+		setSearchHits(ordered);
+		setSearchIdx(0);
+		if (ordered.length) {
+			setHighlightId(ordered[0].id);
+		} else {
+			setHighlightId(null);
+			toast.info('No matches');
 		}
 	};
 
@@ -595,62 +674,95 @@ const Chat = ({ inMobile }) => {
 			</div>
 
 			{searchOpen && (
-				<div className="px-3 py-2 border-b border-black/10 flex gap-2 items-center shrink-0 flex-wrap">
+				<div className="chat-search-bar shrink-0 flex flex-col sm:flex-row gap-2 px-3 py-2 border-b border-black/10 bg-quatery/40">
 					<input
 						value={searchQ}
 						onChange={(e) => setSearchQ(e.target.value)}
 						onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
 						placeholder="Search messages…"
-						className="flex-1 min-w-[8rem] bg-quatery rounded-lg px-3 py-1.5 text-sm outline-none"
+						className="flex-1 w-full min-w-0 bg-quatery text-black rounded-lg px-3 py-2 text-sm outline-none border border-black/10 focus:border-primary"
+						autoFocus
 					/>
-					<button
-						type="button"
-						className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg"
-						onClick={handleSearch}
-					>
-						Go
-					</button>
-					{searchHits.length > 0 && (
-						<>
-							<span className="text-xs text-black/50">
-								{searchIdx + 1}/{searchHits.length}
-							</span>
-							<button
-								type="button"
-								className="text-xs px-2 py-1 rounded bg-black/5"
-								onClick={() => jumpSearch(-1)}
-							>
-								Prev
-							</button>
-							<button
-								type="button"
-								className="text-xs px-2 py-1 rounded bg-black/5"
-								onClick={() => jumpSearch(1)}
-							>
-								Next
-							</button>
-						</>
-					)}
+					<div className="flex items-center gap-2 shrink-0">
+						<button
+							type="button"
+							className="text-sm bg-primary text-white px-3 py-2 rounded-lg hover:opacity-90"
+							onClick={handleSearch}
+						>
+							Go
+						</button>
+						{searchHits.length > 0 && (
+							<>
+								<span className="text-xs text-black/60 whitespace-nowrap">
+									{searchIdx + 1}/{searchHits.length}
+								</span>
+								<button
+									type="button"
+									className="text-xs px-2 py-1.5 rounded-md bg-black/5 text-black hover:bg-black/10"
+									onClick={() => jumpSearch(-1)}
+								>
+									Prev
+								</button>
+								<button
+									type="button"
+									className="text-xs px-2 py-1.5 rounded-md bg-black/5 text-black hover:bg-black/10"
+									onClick={() => jumpSearch(1)}
+								>
+									Next
+								</button>
+							</>
+						)}
+						<button
+							type="button"
+							className="text-xs px-2 py-1.5 rounded-md text-black/50 hover:text-black"
+							onClick={() => {
+								setSearchOpen(false);
+								setSearchHits([]);
+								setHighlightId(null);
+							}}
+						>
+							Close
+						</button>
+					</div>
 				</div>
 			)}
 
-			{/* Messages */}
-			<Messages
-				receiverImg={receiverData.photoURL}
-				receiverId={receiverData.id || ''}
-				onReply={handleReply}
-				onEdit={handleEdit}
-				onDelete={handleDelete}
-				onReact={handleReact}
-				typingUserId={typingUserId}
-				peerLastReadId={peerLastReadId}
-				currentUserLastReadId={myLastReadId}
-				onLoadOlder={loadOlder}
-				hasMore={hasMore}
-				loadingOlder={loadingOlder}
-				highlightMessageId={highlightId}
-				highlightQuery={searchHits.length ? searchQ : ''}
-			/>
+			{/* Messages pane */}
+			<div className="chat-messages-wrap relative flex-1 min-h-0 flex flex-col">
+				{messagesLoading && !(messages?.messages?.length) ? (
+					<div className="flex-1 flex items-center justify-center text-sm text-black/50">
+						Loading messages…
+					</div>
+				) : messagesError && !(messages?.messages?.length) ? (
+					<div className="flex-1 flex flex-col items-center justify-center gap-3 px-4 text-center">
+						<p className="text-sm text-red-500">{messagesError}</p>
+						<button
+							type="button"
+							className="text-sm bg-primary text-white px-4 py-2 rounded-lg"
+							onClick={() => setReloadKey((k) => k + 1)}
+						>
+							Retry
+						</button>
+					</div>
+				) : (
+					<Messages
+						receiverImg={receiverData.photoURL}
+						receiverId={receiverData.id || ''}
+						onReply={handleReply}
+						onEdit={handleEdit}
+						onDelete={handleDelete}
+						onReact={handleReact}
+						typingUserId={typingUserId}
+						peerLastReadId={peerLastReadId}
+						currentUserLastReadId={myLastReadId}
+						onLoadOlder={loadOlder}
+						hasMore={hasMore}
+						loadingOlder={loadingOlder}
+						highlightMessageId={highlightId}
+						highlightQuery={searchHits.length ? searchQ : ''}
+					/>
+				)}
+			</div>
 
 			{/* Composer */}
 			<div className="bottom">

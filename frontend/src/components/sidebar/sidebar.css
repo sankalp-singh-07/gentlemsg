@@ -1,41 +1,41 @@
 .sidebar {
-    @apply flex-grow-[2] md:flex-grow-[5] lg:flex-grow flex-shrink basis-0 bg-quatery h-full w-full overflow-hidden
+    @apply flex flex-col flex-grow-[2] md:flex-grow-[5] lg:flex-grow flex-shrink basis-0 bg-quatery h-screen w-full max-w-full min-w-[16rem] sm:min-w-[18rem] overflow-hidden;
 }
 
 .top {
-    @apply flex items-center justify-between h-16 w-full border-b-4 px-4 border-[#B8D9FF]
+    @apply flex items-center justify-between h-14 sm:h-16 w-full border-b-4 px-3 sm:px-4 border-[#B8D9FF] shrink-0;
 }
 
 .title {
-    @apply text-xl font-semibold text-black
+    @apply text-lg sm:text-xl font-semibold text-black truncate;
 }
 
 .darkEl {
-    @apply border-none p-2 rounded-full h-10 w-10 flex justify-center items-center bg-primary text-tertiary
+    @apply border-none p-2 rounded-full h-10 w-10 flex justify-center items-center bg-primary text-tertiary;
 }
 
 .mid {
-    @apply flex items-center justify-between w-full pt-2 px-2 flex-col h-[79%]
+    @apply flex items-stretch w-full pt-2 px-2 flex-col flex-1 min-h-0;
 }
 
-.userActions {
-    @apply flex items-center w-full justify-between h-16
+.userOptions {
+    @apply flex items-center w-full justify-between gap-2 shrink-0;
 }
 
 .searchEl {
-    @apply flex w-10/12 relative
+    @apply flex w-10/12 relative;
 }
 
 .searchBarEl {
-    @apply w-full h-10 p-2 border-b-4 border-[#B8D9FF] bg-quatery focus:outline-none placeholder:text-sm focus:placeholder:text-quatery
+    @apply w-full h-10 p-2 border-b-4 border-[#B8D9FF] bg-quatery focus:outline-none placeholder:text-sm focus:placeholder:text-quatery;
 }
 
 .searchBarEl:focus-within {
-    @apply border-primary transition ease-out delay-75
+    @apply border-primary transition ease-out delay-75;
 }
 
 .addNewUser {
-    @apply w-full p-4 h-10 rounded-md bg-primary text-white flex items-center justify-self-start relative mr-2
+    @apply w-full p-4 h-10 rounded-md bg-primary text-white flex items-center justify-self-start relative mr-2;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -48,49 +48,53 @@
 }
 
 .userChats {
-    @apply flex flex-col w-full h-full overflow-y-scroll text-black
+    @apply flex flex-col w-full flex-1 min-h-0 overflow-y-auto text-black py-1;
 }
 
 .userChat {
-    @apply flex items-center w-full h-16 cursor-pointer 
+    @apply flex items-center w-full min-h-[3.5rem] h-auto py-1 cursor-pointer;
 }
 
 .userChatImg {
-    @apply w-12 h-12 rounded-full mr-2 md:mr-1 lg:mr-2
+    @apply w-11 h-11 sm:w-12 sm:h-12 rounded-full mr-2 shrink-0;
 }
 
 .avatar {
-    @apply w-full h-full rounded-full object-cover
+    @apply w-full h-full rounded-full object-cover;
 }
 
 .userChatInfo {
-    @apply flex flex-col w-9/12 items-start justify-center ml-2 text-neutral-950
+    @apply flex flex-col flex-1 min-w-0 items-start justify-center ml-1 text-black;
 }
 
 .userName {
-    @apply text-base font-medium
+    @apply text-sm sm:text-base font-medium truncate w-full text-left;
 }
 
 .userMessage {
-    @apply text-sm font-normal 
+    @apply text-xs sm:text-sm font-normal truncate w-full text-left opacity-70;
 }
 
 .userChatDetails {
-    @apply flex items-end w-1/12 justify-between flex-col font-normal text-neutral-950
+    @apply flex items-end shrink-0 justify-between flex-col font-normal text-black pl-1;
 }
 
 .userChatNotif {
-    @apply w-5 h-5 rounded-full bg-primary text-tertiary flex items-center justify-center p-2 text-xs
+    @apply w-5 h-5 rounded-full bg-primary text-tertiary flex items-center justify-center p-2 text-xs;
 }
 
 .end {
-    @apply flex items-center justify-between min-h-fit w-full px-4 pb-3
+    @apply flex items-center justify-between shrink-0 w-full px-3 sm:px-4 py-2 border-t border-[#B8D9FF]/40;
 }
 
 .userProfile {
-    @apply w-4/5 h-full flex items-center justify-start py-3
+    @apply flex-1 min-w-0 h-full flex items-center justify-start py-2 text-left;
+}
+
+.userProfileInfo {
+    @apply text-left items-start;
 }
 
 .setting {
-    @apply w-8 h-8 flex items-center justify-center relative
+    @apply w-8 h-8 flex items-center justify-center relative shrink-0;
 }

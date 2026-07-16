@@ -32,5 +32,12 @@ export const logout = async (): Promise<void> => {
 		console.error('Logout API error:', error);
 	} finally {
 		clearToken();
+		// Tear down presence WS (lazy import avoids circular deps at module load)
+		try {
+			const { presenceHub } = await import('@/shared/ws/presenceHub');
+			presenceHub.disconnect();
+		} catch {
+			/* ignore */
+		}
 	}
 };

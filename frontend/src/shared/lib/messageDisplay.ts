@@ -17,6 +17,16 @@ function tryDecryptLegacy(encrypted: string, userA?: string, userB?: string): st
 	}
 }
 
+/** True if content looks like legacy CryptoJS AES ciphertext. */
+export function looksLikeCiphertext(content: string): boolean {
+	if (!content || content.length < 20) return false;
+	return (
+		!/\s/.test(content) &&
+		/^[A-Za-z0-9+/=]+$/.test(content.slice(0, 48)) &&
+		(content.startsWith('U2FsdGVkX1') || content.length > 32)
+	);
+}
+
 /** Prefer plain text; fall back to legacy decrypt for old messages. */
 export function displayTextMessage(
 	content: string,
@@ -24,17 +34,50 @@ export function displayTextMessage(
 	peerId?: string
 ): string {
 	if (!content) return '';
-	// Heuristic: AES ciphertext is base64-ish without spaces and fairly long
-	const looksEncrypted =
-		content.length > 24 &&
-		!/\s/.test(content) &&
-		/^[A-Za-z0-9+/=]+$/.test(content.slice(0, 40));
-
-	if (looksEncrypted) {
+	if (looksLikeCiphertext(content)) {
 		const plain = tryDecryptLegacy(content, currentUserId, peerId);
 		if (plain) return plain;
+		// Never show raw ciphertext blobs in the UI
+		return 'Message';
 	}
 	return content;
+}
+
+/** Sidebar / search preview for last message */
+export function previewLastMessage(
+	message: string | null | undefined,
+	type: string | null | undefined,
+	currentUserId?: string,
+	peerId?: string,
+	maxLen = 36
+): string {
+	if (!message) return 'Start conversation';
+	if (type === 'image') return '📷 Image';
+	if (type === 'video') return '🎬 Video';
+	if (type === 'document') return '📄 Document';
+	if (type === 'call') {
+		try {
+			const data = JSON.parse(message) as {
+				status?: string;
+				callType?: string;
+				durationSeconds?: number;
+			};
+			const kind = data.callType === 'video' ? 'Video' : 'Voice';
+			if (data.status === 'missed') return `Missed ${kind.toLowerCase()} call`;
+			if (data.status === 'rejected') return `${kind} call declined`;
+			if (data.status === 'ended' && data.durationSeconds) {
+				const m = Math.floor(data.durationSeconds / 60);
+				const s = data.durationSeconds % 60;
+				return `${kind} call · ${m}:${String(s).padStart(2, '0')}`;
+			}
+			return `${kind} call`;
+		} catch {
+			return 'Call';
+		}
+	}
+	const text = displayTextMessage(message, currentUserId, peerId);
+	if (text.length > maxLen) return `${text.slice(0, maxLen)}…`;
+	return text;
 }
 
 export function formatMessageTime(iso: string | null | undefined): string {

@@ -107,7 +107,7 @@ async def _handle_call_signal(user_id: str, payload: dict) -> None:
                     )
                     await session.commit()
         except Exception as e:
-            logger.warning("call log update failed: %s", e)
+            logger.warning("call log update failed: %s", e, exc_info=True)
 
     delivered = to_user_id in manager.user_connections
     await manager.send_to_user(to_user_id, out)

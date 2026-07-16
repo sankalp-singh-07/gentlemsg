@@ -1,30 +1,63 @@
 import { useEffect, useState } from 'react';
-import { presenceHub } from '@/shared/ws/presenceHub';
+import {
+	presenceHub,
+	type ConnectionStatus,
+} from '@/shared/ws/presenceHub';
 import { WifiOff } from 'lucide-react';
 
-/** Shows when offline or presence WS disconnected. */
+const GRACE_MS = 4000;
+
+/**
+ * Shows only after a grace period of offline network or closed WS
+ * (avoids false "Reconnecting" on mount / StrictMode).
+ */
 export function ConnectionBanner() {
 	const [online, setOnline] = useState(
 		typeof navigator !== 'undefined' ? navigator.onLine : true
 	);
-	const [wsOk, setWsOk] = useState(true);
+	const [wsStatus, setWsStatus] = useState<ConnectionStatus>(
+		presenceHub.status
+	);
+	const [show, setShow] = useState(false);
 
 	useEffect(() => {
 		const on = () => setOnline(true);
 		const off = () => setOnline(false);
 		window.addEventListener('online', on);
 		window.addEventListener('offline', off);
-		const id = setInterval(() => {
-			setWsOk(presenceHub.isConnected || !online);
-		}, 2000);
+		const unsub = presenceHub.onStatus(setWsStatus);
 		return () => {
 			window.removeEventListener('online', on);
 			window.removeEventListener('offline', off);
-			clearInterval(id);
+			unsub();
 		};
-	}, [online]);
+	}, []);
 
-	if (online && wsOk) return null;
+	useEffect(() => {
+		const problem =
+			!online || wsStatus === 'connecting' || wsStatus === 'closed';
+
+		if (!problem) {
+			setShow(false);
+			return;
+		}
+
+		const t = setTimeout(() => {
+			const status = presenceHub.status;
+			const netOnline = navigator.onLine;
+			if (!netOnline) {
+				setShow(true);
+			} else if (status === 'connecting' || status === 'closed') {
+				setShow(true);
+			} else {
+				setShow(false);
+			}
+		}, GRACE_MS);
+
+		return () => clearTimeout(t);
+	}, [online, wsStatus]);
+
+	if (!show) return null;
 
 	return (
 		<div

@@ -6,7 +6,7 @@ import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
-import { displayTextMessage, formatDayLabel } from '@/shared/lib/messageDisplay';
+import { previewLastMessage, formatDayLabel } from '@/shared/lib/messageDisplay';
 import { Avatar, ChatListSkeleton, EmptyState } from '@/shared/ui';
 import { pinChat, unpinChat } from '@/shared/api/chats';
 import { Pin } from 'lucide-react';
@@ -34,28 +34,19 @@ const UserChats = () => {
 
 	const handleTogglePin = async (e, chat) => {
 		e.stopPropagation();
+		e.preventDefault();
 		try {
 			if (chat.isPinned) {
 				await unpinChat(chat.chatId);
+				toast.success('Chat unpinned', { autoClose: 1500 });
 			} else {
 				await pinChat(chat.chatId);
+				toast.success('Chat pinned', { autoClose: 1500 });
 			}
 			dispatch(fetchChats(userId));
 		} catch {
 			toast.error('Could not update pin');
 		}
-	};
-
-	const preview = (message, receiverId, type) => {
-		if (!message) return 'Start Conversation';
-		if (type === 'text') {
-			const text = displayTextMessage(message, userId, receiverId);
-			return text.length > 28 ? `${text.slice(0, 28)}…` : text;
-		}
-		if (type === 'image') return '📷 Image';
-		if (type === 'document') return '📄 Document';
-		if (type === 'video') return '🎬 Video';
-		return 'Start Conversation';
 	};
 
 	const sortedChats = [...(chats || [])].sort((a, b) => {
@@ -66,7 +57,7 @@ const UserChats = () => {
 	if (loading) return <ChatListSkeleton count={6} />;
 	if (error)
 		return (
-			<p className="text-center text-sm text-red-500 p-4">{String(error)}</p>
+			<p className="text-sm text-red-500 p-4 text-left">{String(error)}</p>
 		);
 	if (!sortedChats.length) {
 		return (
@@ -82,9 +73,11 @@ const UserChats = () => {
 		<>
 			{sortedChats.map((chat) => {
 				const active = activeChatId === chat.chatId;
+				const unread = !chat.isSeen;
+				const pinned = Boolean(chat.isPinned);
 				return (
 					<div
-						className="py-1"
+						className="py-0.5 px-1 group/chat"
 						onClick={() => handleClick(chat.chatId)}
 						key={chat.chatId}
 						role="button"
@@ -94,12 +87,12 @@ const UserChats = () => {
 						}
 					>
 						<div
-							className={`userChat hover:bg-tertiaryHover px-2 py-2 rounded-md cursor-pointer transition-colors ${
+							className={`userChat px-2 py-2.5 rounded-xl cursor-pointer transition-colors border ${
 								active
-									? 'bg-sky-100 ring-1 ring-primary/30'
-									: chat.isSeen
-										? 'bg-tertiary'
-										: 'bg-sky-200'
+									? 'bg-primary/15 border-primary/40 ring-1 ring-primary/30'
+									: unread
+										? 'bg-primary/10 border-transparent hover:bg-primary/15'
+										: 'bg-transparent border-transparent hover:bg-black/5 dark:hover:bg-white/5'
 							}`}
 						>
 							<div className="userChatImg">
@@ -109,47 +102,64 @@ const UserChats = () => {
 									size={44}
 								/>
 							</div>
-							<div className="userChatInfo min-w-0">
-								<div className="userName">
-									<h1 className="truncate">
-										{chat.receiverName || '…'}
-									</h1>
-								</div>
-								<div className="userMessage">
-									<p className="truncate">
-										{preview(
-											chat.lastMessage,
-											chat.receiverId,
-											chat.type
+							<div className="userChatInfo min-w-0 text-left">
+								<div className="userName w-full text-left">
+									<span className="flex items-center gap-1.5 min-w-0">
+										{pinned && (
+											<Pin
+												size={11}
+												className="text-primary shrink-0"
+												fill="currentColor"
+												aria-label="Pinned"
+											/>
 										)}
-									</p>
+										<span className="block truncate text-sm sm:text-base font-semibold text-black text-left">
+											{chat.receiverName || '…'}
+										</span>
+									</span>
+								</div>
+								<div className="userMessage w-full text-left">
+									<span className="block truncate text-xs sm:text-sm text-black/60 text-left">
+										{previewLastMessage(
+											chat.lastMessage,
+											chat.type,
+											userId,
+											chat.receiverId
+										)}
+									</span>
 								</div>
 							</div>
-							<div className="userChatDetails flex flex-col items-end gap-1">
-								<div className="text-xs whitespace-nowrap">
+							<div className="userChatDetails flex flex-col items-end gap-1 shrink-0">
+								<div className="text-[11px] whitespace-nowrap text-black/50">
 									{chat.sentAt
 										? formatDayLabel(chat.sentAt)
 										: ''}
 								</div>
-								<div className="flex items-center gap-1">
-									{chat.isPinned && (
-										<Pin
-											size={12}
-											className="text-primary"
-											fill="currentColor"
+								<div className="flex items-center gap-1 min-h-[18px]">
+									{unread && (
+										<span
+											className="inline-block w-2 h-2 rounded-full bg-primary"
+											aria-label="Unread"
 										/>
-									)}
-									{!chat.isSeen && (
-										<span className="inline-block w-2 h-2 rounded-full bg-primary" />
 									)}
 									<button
 										type="button"
-										className="text-black/30 hover:text-primary p-0.5"
+										className={`p-1 rounded-md transition-opacity ${
+											pinned
+												? 'text-primary opacity-100'
+												: 'text-black/35 opacity-0 group-hover/chat:opacity-100 focus:opacity-100 hover:text-primary hover:bg-black/5'
+										}`}
 										onClick={(e) => handleTogglePin(e, chat)}
-										title={chat.isPinned ? 'Unpin' : 'Pin'}
-										aria-label={chat.isPinned ? 'Unpin' : 'Pin'}
+										title={pinned ? 'Unpin chat' : 'Pin chat'}
+										aria-label={
+											pinned ? 'Unpin chat' : 'Pin chat'
+										}
+										aria-pressed={pinned}
 									>
-										<Pin size={12} />
+										<Pin
+											size={13}
+											fill={pinned ? 'currentColor' : 'none'}
+										/>
 									</button>
 								</div>
 							</div>

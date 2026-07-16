@@ -56,28 +56,62 @@ function App() {
 					}
 
 					switch (ev) {
-						case 'friend_request':
+						case 'friend_request': {
+							const data = event.data as {
+								id?: string;
+								senderId?: string;
+								senderName?: string;
+							};
+							// toastId prevents duplicate stacks when both presence
+							// connections or StrictMode re-fire the same event
+							const id =
+								data?.id ||
+								data?.senderId ||
+								String(Date.now());
 							toast.info(
-								`New friend request from ${(event.data as { senderName?: string })?.senderName || 'someone'}!`,
-								{ position: 'top-right', autoClose: 5000 }
+								`New friend request from ${data?.senderName || 'someone'}!`,
+								{
+									position: 'top-right',
+									autoClose: 5000,
+									toastId: `friend_request-${id}`,
+								}
 							);
 							dispatch(getInitialData(user.id));
 							break;
-						case 'request_accepted':
+						}
+						case 'request_accepted': {
+							const data = event.data as {
+								acceptedByName?: string;
+								acceptedById?: string;
+							};
 							toast.success(
-								`${(event.data as { acceptedByName?: string })?.acceptedByName || 'User'} accepted your request!`,
-								{ position: 'top-right', autoClose: 5000 }
+								`${data?.acceptedByName || 'User'} accepted your request!`,
+								{
+									position: 'top-right',
+									autoClose: 5000,
+									toastId: `request_accepted-${data?.acceptedById || data?.acceptedByName || 'x'}`,
+								}
 							);
 							dispatch(getInitialData(user.id));
 							dispatch(fetchChats(user.id));
 							break;
-						case 'request_rejected':
+						}
+						case 'request_rejected': {
+							const data = event.data as {
+								rejectedByName?: string;
+								rejectedById?: string;
+							};
 							toast.error(
-								`${(event.data as { rejectedByName?: string })?.rejectedByName || 'User'} declined your request.`,
-								{ position: 'top-right', autoClose: 5000 }
+								`${data?.rejectedByName || 'User'} declined your request.`,
+								{
+									position: 'top-right',
+									autoClose: 5000,
+									toastId: `request_rejected-${data?.rejectedById || data?.rejectedByName || 'x'}`,
+								}
 							);
 							dispatch(getInitialData(user.id));
 							break;
+						}
 						case 'user_status_changed':
 						case 'user_online':
 						case 'user_offline':
@@ -106,8 +140,11 @@ function App() {
 		void initAuth();
 
 		return () => {
-			unsub?.();
-			presenceHub.disconnect();
+			// StrictMode-safe: drop handler only. Keep WS alive for CallProvider.
+			// Full disconnect happens on logout.
+			if (unsub) {
+				unsub();
+			}
 		};
 	}, [dispatch]);
 

@@ -373,7 +373,7 @@ const GroupChat = ({ inMobile }) => {
 					const showName =
 						!isOwn && (!prev || prev.senderId !== msg.senderId);
 					return (
-						<div key={msg.id || msg.tempId}>
+						<div className="w-full" key={msg.id || msg.tempId}>
 							{showDay && (
 								<div className="flex justify-center my-2">
 									<span className="text-xs bg-black/10 px-3 py-1 rounded-full">
