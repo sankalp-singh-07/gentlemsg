@@ -3,12 +3,21 @@ import Home from '../home/home.component';
 import Admin from '../admin/admin.component';
 import NotFound from '../404/notfound.component';
 import Chat from '../chat/chat.component';
+import GroupChat from '../groups/groupChat.component';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import '../../styles/components/loader.css';
 import ContactUs from '../contact-us/contactUs.component';
 import FAQ from '../faq/faq.component';
 import AuthCallback from '../auth/AuthCallback';
+import { useContext } from 'react';
+import { MessageContext } from '../../context/message.context';
+
+const MobileConversation = () => {
+	const { groupId } = useContext(MessageContext);
+	if (groupId) return <GroupChat inMobile="show" />;
+	return <Chat inMobile="show" />;
+};
 
 const Router = () => {
 	const { currentUser, loading } = useSelector(selectCurrentUser);
@@ -39,7 +48,7 @@ const Router = () => {
 					path="/chat"
 					element={
 						currentUser ? (
-							<Chat inMobile="show" />
+							<MobileConversation />
 						) : (
 							<Navigate to="/" />
 						)

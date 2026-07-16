@@ -8,6 +8,8 @@ class ConnectionManager:
     def __init__(self):
         # chat_id -> list of WebSocket connections
         self.chat_connections: dict[str, list[WebSocket]] = {}
+        # group_id -> list of WebSocket connections
+        self.group_connections: dict[str, list[WebSocket]] = {}
         # user_id -> list of WebSocket connections (for presence/notifications)
         self.user_connections: dict[str, list[WebSocket]] = {}
 
@@ -23,6 +25,34 @@ class ConnectionManager:
                 self.chat_connections[chat_id].remove(websocket)
             if not self.chat_connections[chat_id]:
                 del self.chat_connections[chat_id]
+
+    async def connect_group(self, group_id: str, websocket: WebSocket):
+        await websocket.accept()
+        if group_id not in self.group_connections:
+            self.group_connections[group_id] = []
+        self.group_connections[group_id].append(websocket)
+
+    async def disconnect_group(self, group_id: str, websocket: WebSocket):
+        if group_id in self.group_connections:
+            if websocket in self.group_connections[group_id]:
+                self.group_connections[group_id].remove(websocket)
+            if not self.group_connections[group_id]:
+                del self.group_connections[group_id]
+
+    async def broadcast_to_group(self, group_id: str, message: dict):
+        """Send a message to all connections in a group room."""
+        if group_id not in self.group_connections:
+            return
+        data = json.dumps(message, default=str)
+        disconnected = []
+        for connection in self.group_connections[group_id]:
+            try:
+                await connection.send_text(data)
+            except Exception:
+                disconnected.append(connection)
+        for conn in disconnected:
+            if conn in self.group_connections.get(group_id, []):
+                self.group_connections[group_id].remove(conn)
 
     async def connect_user(self, user_id: str, websocket: WebSocket):
         await websocket.accept()

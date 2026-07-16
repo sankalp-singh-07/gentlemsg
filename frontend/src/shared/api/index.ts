@@ -5,4 +5,5 @@ export * from './friends';
 export * from './users';
 export * from './notifications';
 export * from './search';
+export * from './groups';
 

@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { selectCurrentUser } from '@/store/user/user.selector';
 import { sendRequests } from '@/store/thunks/thunks';
 import { createChat } from '@/shared/api/chats';
+import { Users } from 'lucide-react';
 import {
 	getRecentSearches,
 	pushRecentSearch,
@@ -23,7 +24,7 @@ const GlobalSearch = () => {
 	const [result, setResult] = useState(null);
 	const [recent, setRecent] = useState(() => getRecentSearches());
 	const debounced = useDebounce(term, 300);
-	const { setChatId } = useContext(MessageContext);
+	const { setChatId, setGroupId } = useContext(MessageContext);
 	const navigate = useNavigate();
 	const dispatch = useDispatch();
 	const { currentUser } = useSelector(selectCurrentUser);
@@ -178,6 +179,35 @@ const GlobalSearch = () => {
 
 					{!loading && result && (
 						<>
+							{result.groups?.length > 0 && (
+								<section className="mb-4">
+									<p className="text-xs font-semibold text-black/50 uppercase mb-2">
+										Groups
+									</p>
+									{result.groups.map((g) => (
+										<button
+											key={g.id}
+											type="button"
+											className="flex w-full items-center gap-3 px-2 py-2 rounded-lg hover:bg-tertiary text-left"
+											onClick={() => {
+												setGroupId(g.id);
+												setOpen(false);
+												if (window.innerWidth <= 600) navigate('/chat');
+											}}
+										>
+											<div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+												<Users size={18} />
+											</div>
+											<div className="min-w-0">
+												<p className="font-medium truncate">{g.name}</p>
+												<p className="text-xs text-black/50 truncate">
+													{g.lastMessage}
+												</p>
+											</div>
+										</button>
+									))}
+								</section>
+							)}
 							{result.chats?.length > 0 && (
 								<section className="mb-4">
 									<p className="text-xs font-semibold text-black/50 uppercase mb-2">
@@ -253,7 +283,9 @@ const GlobalSearch = () => {
 								</section>
 							)}
 
-							{!result.users?.length && !result.chats?.length && (
+							{!result.users?.length &&
+								!result.chats?.length &&
+								!result.groups?.length && (
 								<EmptyState
 									title="No results"
 									description="Try another name or username."

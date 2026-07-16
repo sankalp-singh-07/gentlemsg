@@ -18,10 +18,10 @@ from db.database import engine
 import models  # noqa: F401
 
 # Import route modules
-from api.routes import auth, users, chats, friends, notifications, search
+from api.routes import auth, users, chats, friends, notifications, search, groups
 
 # Import WebSocket route modules
-from websocket import chat_ws, presence_ws
+from websocket import chat_ws, presence_ws, group_ws
 
 # ── Logging ──────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -35,6 +35,7 @@ logger = logging.getLogger("gentlemsg")
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(settings.UPLOAD_DIR, "profile_pictures"), exist_ok=True)
 os.makedirs(os.path.join(settings.UPLOAD_DIR, "chats"), exist_ok=True)
+os.makedirs(os.path.join(settings.UPLOAD_DIR, "groups"), exist_ok=True)
 
 
 def _ensure_sqlite_columns(connection) -> None:
@@ -97,6 +98,7 @@ tags_metadata = [
     {"name": "chats", "description": "Messaging and media uploads"},
     {"name": "notifications", "description": "Push notification tracking"},
     {"name": "search", "description": "Global search across users and chats"},
+    {"name": "groups", "description": "Group chat management and messaging"},
 ]
 
 app = FastAPI(
@@ -149,12 +151,14 @@ api_v1_router.include_router(friends.router)
 api_v1_router.include_router(chats.router)
 api_v1_router.include_router(notifications.router)
 api_v1_router.include_router(search.router)
+api_v1_router.include_router(groups.router)
 
 app.include_router(api_v1_router)
 
 # WebSocket routers (in-memory ConnectionManager — single process only)
 app.include_router(chat_ws.router)
 app.include_router(presence_ws.router)
+app.include_router(group_ws.router)
 
 
 @app.get("/")

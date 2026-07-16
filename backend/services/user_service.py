@@ -203,11 +203,37 @@ async def global_search(
         if len(chat_hits) >= limit:
             break
 
+    # Groups the user belongs to matching name
+    group_hits = []
+    try:
+        from models.group import Group, GroupMember
+
+        gm = await db.execute(
+            select(GroupMember.group_id).where(GroupMember.user_id == current_user_id)
+        )
+        gids = [row[0] for row in gm.all()]
+        if gids:
+            gr = await db.execute(select(Group).where(Group.id.in_(gids)))
+            for g in gr.scalars().all():
+                if q_lower in (g.name or "").lower() or q_lower in (g.description or "").lower():
+                    group_hits.append({
+                        "id": g.id,
+                        "name": g.name,
+                        "description": g.description or "",
+                        "avatarURL": g.avatar_url or "",
+                        "lastMessage": g.last_message,
+                        "lastMessageAt": g.last_message_at.isoformat() if g.last_message_at else None,
+                    })
+                    if len(group_hits) >= limit:
+                        break
+    except Exception:
+        group_hits = []
+
     return {
         "query": q,
         "users": users,
         "chats": chat_hits,
-        "groups": [],
+        "groups": group_hits,
     }
 
 

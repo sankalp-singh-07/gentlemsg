@@ -5,3 +5,5 @@ export {
 	type PresenceSocket,
 	type PresenceEventHandler,
 } from './presenceClient';
+export { connectGroup, type GroupSocket, type GroupMessageHandler } from './groupClient';
+

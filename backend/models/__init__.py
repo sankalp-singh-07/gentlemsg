@@ -6,6 +6,7 @@ from models.message import Message
 from models.friend_request import FriendRequest
 from models.notification import Notification
 from models.blocked_user import BlockedUser
+from models.group import Group, GroupMember, GroupMessage
 
 __all__ = [
     "User",
@@ -15,4 +16,7 @@ __all__ = [
     "FriendRequest",
     "Notification",
     "BlockedUser",
+    "Group",
+    "GroupMember",
+    "GroupMessage",
 ]
