@@ -24,6 +24,9 @@ class Chat(Base):
     last_message_sender_id: Mapped[str] = mapped_column(String, nullable=True)
     is_read_by_user1: Mapped[bool] = mapped_column(Boolean, default=True)
     is_read_by_user2: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Cursor for "unread divider" — last message id each user has read
+    last_read_message_id_user1 = mapped_column(String, nullable=True)
+    last_read_message_id_user2 = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

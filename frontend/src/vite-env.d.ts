@@ -25,3 +25,5 @@ declare module '*.svg' {
 
 declare module '*.css';
 
+declare module 'crypto-js';
+

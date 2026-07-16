@@ -20,12 +20,15 @@ class Message(Base):
     sent_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
-    # Soft delete — messages are hidden, not permanently removed
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    # Nullable columns: avoid PEP604 unions for SQLAlchemy 2.0 + Python 3.14
+    reply_to_id = mapped_column(
+        String, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    )
+    edited_at = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
         Index("idx_message_chat_id", "chat_id"),
         Index("idx_message_sender_id", "sender_id"),
         Index("idx_message_chat_sent", "chat_id", "sent_at"),
-        Index("idx_message_chat_sent_desc", "chat_id", "sent_at"),
     )

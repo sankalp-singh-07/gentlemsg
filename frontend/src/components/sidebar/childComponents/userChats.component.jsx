@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectChats } from '../../../store/chats/chats.selector';
@@ -6,97 +6,100 @@ import { fetchChats } from '../../../store/chats/chats.reducer';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { useContext } from 'react';
 import { MessageContext } from '../../../context/message.context';
-import { decryptMessage, generateKey } from '../../../utils/encryption';
+import { displayTextMessage, formatDayLabel } from '@/shared/lib/messageDisplay';
+import { Avatar, ChatListSkeleton, EmptyState } from '@/shared/ui';
 
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
 	const { currentUser } = useSelector(selectCurrentUser);
-	const userId = currentUser.id;
+	const userId = currentUser?.id;
 	const dispatch = useDispatch();
-	const { setChatId } = useContext(MessageContext);
+	const { setChatId, chatId: activeChatId } = useContext(MessageContext);
 
 	useEffect(() => {
-		dispatch(fetchChats(userId));
+		if (userId) dispatch(fetchChats(userId));
 	}, [dispatch, userId]);
 
 	const navigate = useNavigate();
 
 	const handleClick = (chatId) => {
-		const currentWidth = window.innerWidth;
 		setChatId(chatId);
-		if (currentWidth <= 600) {
+		if (window.innerWidth <= 600) {
 			navigate('/chat');
 		}
 	};
 
-	const getDate = (timeStamp) => {
-		if (!timeStamp) return '';
-		const date = new Date(timeStamp);
-		const options = { day: 'numeric', month: 'short' };
-		return new Intl.DateTimeFormat('en-US', options).format(date);
-	};
-
-	const showLatestMessage = (message, receiverId, type) => {
+	const preview = (message, receiverId, type) => {
 		if (!message) return 'Start Conversation';
-
 		if (type === 'text') {
-			// Try to decrypt
-			const encryptionKey = generateKey(userId, receiverId);
-			const decryptedMessage = decryptMessage(message, encryptionKey);
-			
-			// If decryption fails, it's likely a legacy plaintext message, so fallback to raw
-			const textToDisplay = decryptedMessage || message;
-			
-			return textToDisplay.length > 17
-				? `${textToDisplay.slice(0, 17)}...`
-				: textToDisplay;
-		} else if (type === 'image') return '[Image]';
-		else if (type === 'document') return '[Document]';
-		else if (type === 'video') return '[Video]';
-		else return 'Start Conversation';
+			const text = displayTextMessage(message, userId, receiverId);
+			return text.length > 28 ? `${text.slice(0, 28)}…` : text;
+		}
+		if (type === 'image') return '📷 Image';
+		if (type === 'document') return '📄 Document';
+		if (type === 'video') return '🎬 Video';
+		return 'Start Conversation';
 	};
 
-	const sortedChats = [...chats].sort((a, b) => {
-		return new Date(b.sentAt) - new Date(a.sentAt);
+	const sortedChats = [...(chats || [])].sort((a, b) => {
+		return new Date(b.sentAt || 0) - new Date(a.sentAt || 0);
 	});
 
-	if (loading) return <h1>Loading...</h1>;
-	if (error) return <h1>{error}</h1>;
+	if (loading) return <ChatListSkeleton count={6} />;
+	if (error)
+		return (
+			<p className="text-center text-sm text-red-500 p-4">{String(error)}</p>
+		);
+	if (!sortedChats.length) {
+		return (
+			<EmptyState
+				title="No chats yet"
+				description="Add friends and start a conversation."
+				className="py-10"
+			/>
+		);
+	}
 
 	return (
 		<>
 			{sortedChats.map((chat) => {
-				// Backend already provides receiver data in the chat list
+				const active = activeChatId === chat.chatId;
 				return (
 					<div
-						className="py-2"
+						className="py-1"
 						onClick={() => handleClick(chat.chatId)}
 						key={chat.chatId}
+						role="button"
+						tabIndex={0}
+						onKeyDown={(e) =>
+							e.key === 'Enter' && handleClick(chat.chatId)
+						}
 					>
 						<div
-							className={`userChat hover:bg-tertiaryHover px-2 py-2 rounded-md ${
-								chat.isSeen ? 'bg-tertiary' : 'bg-sky-200'
+							className={`userChat hover:bg-tertiaryHover px-2 py-2 rounded-md cursor-pointer transition-colors ${
+								active
+									? 'bg-sky-100 ring-1 ring-primary/30'
+									: chat.isSeen
+										? 'bg-tertiary'
+										: 'bg-sky-200'
 							}`}
 						>
 							<div className="userChatImg">
-								{chat.receiverPhotoURL ? (
-									<img
-										src={chat.receiverPhotoURL}
-										alt="..."
-										referrerPolicy="no-referrer"
-										className="avatar"
-									/>
-								) : (
-									<h1>?</h1>
-								)}
+								<Avatar
+									src={chat.receiverPhotoURL}
+									alt={chat.receiverName || 'User'}
+									size={44}
+								/>
 							</div>
-							<div className="userChatInfo">
+							<div className="userChatInfo min-w-0">
 								<div className="userName">
-									<h1>{chat.receiverName || '...'}</h1>
+									<h1 className="truncate">
+										{chat.receiverName || '…'}
+									</h1>
 								</div>
 								<div className="userMessage">
-									<p>
-										{showLatestMessage(
+									<p className="truncate">
+										{preview(
 											chat.lastMessage,
 											chat.receiverId,
 											chat.type
@@ -105,9 +108,14 @@ const UserChats = () => {
 								</div>
 							</div>
 							<div className="userChatDetails">
-								<div className="text-xs">
-									{getDate(chat.sentAt)}
+								<div className="text-xs whitespace-nowrap">
+									{chat.sentAt
+										? formatDayLabel(chat.sentAt)
+										: ''}
 								</div>
+								{!chat.isSeen && (
+									<span className="mt-1 inline-block w-2 h-2 rounded-full bg-primary" />
+								)}
 							</div>
 						</div>
 					</div>

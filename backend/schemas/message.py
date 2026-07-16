@@ -6,6 +6,11 @@ from datetime import datetime
 class MessageCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=10000)
     type: str = Field(default="text", pattern="^(text|image|video|document)$")
+    reply_to_id: Optional[str] = None
+
+
+class MessageUpdate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=10000)
 
 
 class MessageResponse(BaseModel):
@@ -15,6 +20,8 @@ class MessageResponse(BaseModel):
     content: str
     type: str
     sent_at: datetime
+    reply_to_id: Optional[str] = None
+    edited_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

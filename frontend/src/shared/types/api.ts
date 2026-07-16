@@ -42,6 +42,14 @@ export interface Chat {
 
 export type MessageType = 'text' | 'image' | 'video' | 'document';
 
+export interface ReplyPreview {
+	id: string;
+	senderId: string;
+	message: string;
+	type: string;
+	isDeleted?: boolean;
+}
+
 export interface ChatMessage {
 	id: string;
 	senderId: string;
@@ -49,10 +57,23 @@ export interface ChatMessage {
 	type: MessageType | string;
 	sentAt: string | null;
 	receiverId?: string;
+	replyToId?: string | null;
+	editedAt?: string | null;
+	replyTo?: ReplyPreview | null;
+	/** Client-only status for optimistic UI */
+	status?: 'sending' | 'sent' | 'failed';
+	tempId?: string;
 }
 
 export interface MessagesResponse {
 	messages: ChatMessage[];
+	hasMore?: boolean;
+	lastRead?: {
+		user1: string | null;
+		user2: string | null;
+		user1Id: string;
+		user2Id: string;
+	} | null;
 }
 
 export interface FriendRequest {

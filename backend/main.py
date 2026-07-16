@@ -37,6 +37,37 @@ os.makedirs(os.path.join(settings.UPLOAD_DIR, "profile_pictures"), exist_ok=True
 os.makedirs(os.path.join(settings.UPLOAD_DIR, "chats"), exist_ok=True)
 
 
+def _ensure_sqlite_columns(connection) -> None:
+    """Add Phase-3 columns on existing SQLite DBs (create_all does not alter)."""
+    from sqlalchemy import text, inspect
+
+    inspector = inspect(connection)
+    tables = inspector.get_table_names()
+
+    def cols(table: str) -> set[str]:
+        if table not in tables:
+            return set()
+        return {c["name"] for c in inspector.get_columns(table)}
+
+    msg_cols = cols("messages")
+    if msg_cols:
+        if "reply_to_id" not in msg_cols:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN reply_to_id VARCHAR"))
+        if "edited_at" not in msg_cols:
+            connection.execute(text("ALTER TABLE messages ADD COLUMN edited_at DATETIME"))
+
+    chat_cols = cols("chats")
+    if chat_cols:
+        if "last_read_message_id_user1" not in chat_cols:
+            connection.execute(
+                text("ALTER TABLE chats ADD COLUMN last_read_message_id_user1 VARCHAR")
+            )
+        if "last_read_message_id_user2" not in chat_cols:
+            connection.execute(
+                text("ALTER TABLE chats ADD COLUMN last_read_message_id_user2 VARCHAR")
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting GentleMSG API...")
@@ -47,6 +78,8 @@ async def lifespan(app: FastAPI):
     if settings.AUTO_CREATE_TABLES:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            if settings.database_dialect == "sqlite":
+                await conn.run_sync(_ensure_sqlite_columns)
         logger.info("Database tables ready (create_all)")
     else:
         logger.info("AUTO_CREATE_TABLES=false — use Alembic migrations")

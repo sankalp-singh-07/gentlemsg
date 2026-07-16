@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,18 +8,22 @@ from db.database import get_db
 from core.security import get_current_user
 from core.limiter import limiter
 from schemas.chat import ChatCreate
-from schemas.message import MessageCreate
+from schemas.message import MessageCreate, MessageUpdate
 from services.chat_service import (
     get_or_create_chat,
     get_user_chats,
     get_chat_by_id,
     get_messages,
     send_message,
+    edit_message,
     upload_media,
     get_chat_media,
     mark_chat_read,
     verify_chat_participant,
     soft_delete_message,
+    search_messages,
+    _message_dict,
+    _reply_previews,
 )
 from websocket.manager import manager
 from services.user_service import get_user_by_id
@@ -61,15 +66,33 @@ async def list_messages(
     chat_id: str,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    before_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Get messages in a chat with pagination."""
+    """Get messages in a chat. Use before_id for older pages (cursor)."""
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
-    messages = await get_messages(chat_id, db, limit=limit, offset=offset)
-    return {"messages": messages}
+    return await get_messages(
+        chat_id, db, limit=limit, offset=offset, before_id=before_id
+    )
+
+
+@router.get("/{chat_id}/messages/search")
+async def search_chat_messages(
+    chat_id: str,
+    q: str = Query(..., min_length=2, max_length=200),
+    limit: int = Query(default=50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Search messages inside a chat."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    results = await search_messages(chat_id, q, db, limit=limit)
+    return {"messages": results, "query": q}
 
 
 @router.get("/{chat_id}")
@@ -85,7 +108,7 @@ async def get_chat(
     chat = await get_chat_by_id(chat_id, db)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
-        
+
     return {
         "id": chat.id,
         "user1_id": chat.user1_id,
@@ -95,6 +118,8 @@ async def get_chat(
         "last_message_at": chat.last_message_at,
         "is_read_by_user1": chat.is_read_by_user1,
         "is_read_by_user2": chat.is_read_by_user2,
+        "last_read_message_id_user1": chat.last_read_message_id_user1,
+        "last_read_message_id_user2": chat.last_read_message_id_user2,
         "created_at": chat.created_at,
     }
 
@@ -118,26 +143,59 @@ async def create_message(
         content=body.content,
         msg_type=body.type,
         db=db,
+        reply_to_id=body.reply_to_id,
     )
 
-    # Broadcast via WebSocket to chat room
+    chat = await get_chat_by_id(chat_id, db)
+    previews = await _reply_previews([message], db)
     msg_data = {
         "event": "new_message",
-        "id": message.id,
-        "senderId": message.sender_id,
-        "message": message.content,
-        "type": message.type,
-        "sentAt": message.sent_at.isoformat(),
+        **_message_dict(
+            message,
+            chat,
+            previews.get(message.reply_to_id) if message.reply_to_id else None,
+        ),
     }
     await manager.broadcast_to_chat(chat_id, msg_data)
 
-    chat = await get_chat_by_id(chat_id, db)
     if chat:
-        receiver_id = chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        receiver_id = (
+            chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        )
         await manager.send_to_user(receiver_id, {"event": "chats_updated"})
         await manager.send_to_user(current_user["id"], {"event": "chats_updated"})
 
     return msg_data
+
+
+@router.patch("/{chat_id}/messages/{message_id}")
+async def patch_message(
+    chat_id: str,
+    message_id: str,
+    body: MessageUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Edit own text message."""
+    message = await edit_message(
+        chat_id=chat_id,
+        message_id=message_id,
+        user_id=current_user["id"],
+        content=body.content,
+        db=db,
+    )
+    chat = await get_chat_by_id(chat_id, db)
+    previews = await _reply_previews([message], db)
+    event = {
+        "event": "message_edited",
+        **_message_dict(
+            message,
+            chat,
+            previews.get(message.reply_to_id) if message.reply_to_id else None,
+        ),
+    }
+    await manager.broadcast_to_chat(chat_id, event)
+    return event
 
 
 @router.delete("/{chat_id}/messages/{message_id}")
@@ -155,12 +213,15 @@ async def delete_message(
         db=db,
     )
 
-    await manager.broadcast_to_chat(chat_id, {
-        "event": "message_deleted",
-        "messageId": message_id,
-    })
+    await manager.broadcast_to_chat(
+        chat_id,
+        {
+            "event": "message_deleted",
+            "messageId": message_id,
+        },
+    )
 
-    logger.info(f"Message {message_id} soft-deleted by {current_user['id']}")
+    logger.info("Message %s soft-deleted by %s", message_id, current_user["id"])
     return result
 
 
@@ -172,20 +233,24 @@ async def typing_indicator(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Send a typing indicator to the chat room via WebSocket. Rate limited: 30/minute."""
+    """Send a typing indicator to the chat room via WebSocket."""
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
-    await manager.broadcast_to_chat(chat_id, {
-        "event": "typing",
-        "userId": current_user["id"],
-    })
+    await manager.broadcast_to_chat(
+        chat_id,
+        {
+            "event": "typing",
+            "userId": current_user["id"],
+        },
+    )
     return {"status": "ok"}
 
 
 @router.put("/{chat_id}/read")
 async def mark_read(
     chat_id: str,
+    last_message_id: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -193,10 +258,29 @@ async def mark_read(
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
-    success = await mark_chat_read(chat_id, current_user["id"], db)
-    if not success:
+    result = await mark_chat_read(
+        chat_id, current_user["id"], db, last_message_id=last_message_id
+    )
+    if not result.get("ok"):
         raise HTTPException(status_code=404, detail="Chat not found")
-    return {"message": "Chat marked as read"}
+
+    # Notify peer for read receipts
+    chat = await get_chat_by_id(chat_id, db)
+    if chat:
+        peer = (
+            chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        )
+        await manager.broadcast_to_chat(
+            chat_id,
+            {
+                "event": "messages_read",
+                "userId": current_user["id"],
+                "lastReadMessageId": result.get("lastReadMessageId"),
+            },
+        )
+        await manager.send_to_user(peer, {"event": "chats_updated"})
+
+    return {"message": "Chat marked as read", **result}
 
 
 @router.post("/{chat_id}/media")
@@ -208,7 +292,7 @@ async def upload_chat_media(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Upload media file and create a message for it. Rate limited: 30/minute."""
+    """Upload media file and create a message for it."""
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
@@ -219,7 +303,6 @@ async def upload_chat_media(
         db=db,
     )
 
-    # Broadcast via WebSocket
     msg_data = {
         "event": "new_message",
         "id": result["message_id"],
@@ -227,12 +310,17 @@ async def upload_chat_media(
         "message": result["url"],
         "type": result["type"],
         "sentAt": result.get("sent_at"),
+        "replyToId": result.get("reply_to_id"),
+        "editedAt": None,
+        "replyTo": None,
     }
     await manager.broadcast_to_chat(chat_id, msg_data)
 
     chat = await get_chat_by_id(chat_id, db)
     if chat:
-        receiver_id = chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        receiver_id = (
+            chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        )
         await manager.send_to_user(receiver_id, {"event": "chats_updated"})
         await manager.send_to_user(current_user["id"], {"event": "chats_updated"})
 
@@ -259,10 +347,7 @@ async def download_chat_file(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Auth-gated download for a chat attachment (participant only).
-
-    Prefer this over public /uploads when SERVE_UPLOADS_PUBLIC is false.
-    """
+    """Auth-gated download for a chat attachment."""
     import os
     from fastapi.responses import FileResponse
     from core.config import settings
