@@ -5,8 +5,9 @@ import { useContext, useState } from 'react';
 import { DialogContext } from '../../context/dialog.context';
 import { MessageContext } from '../../context/message.context';
 import { selectCurrentUser } from '../../store/user/user.selector';
-import { createChat } from '../../services/chatService';
+import { createChat } from '@/services/chatService';
 import { toast } from 'react-toastify';
+import { Avatar, EmptyState, Button } from '@/shared/ui';
 
 const FriendsList = () => {
 	const { friends } = useSelector(friendSelector);
@@ -22,7 +23,6 @@ const FriendsList = () => {
 
 		setOpeningId(friend.id);
 		try {
-			// Always use backend get-or-create so chatId is the real UUID
 			const chat = await createChat(friend.id);
 			const chatId = chat.id;
 			if (!chatId) {
@@ -42,7 +42,12 @@ const FriendsList = () => {
 	};
 
 	if (!friends || friends.length === 0) {
-		return <p className="text-center p-4 text-gray-500">No friends yet</p>;
+		return (
+			<EmptyState
+				title="No friends yet"
+				description="Search for users and send a friend request to get started."
+			/>
+		);
 	}
 
 	return (
@@ -52,26 +57,25 @@ const FriendsList = () => {
 					key={friend.id || index}
 					className="flex bg-quatery p-4 rounded shadow-md items-center justify-between"
 				>
-					<div className="flex items-center gap-2 md:gap-3">
-						<img
+					<div className="flex items-center gap-2 md:gap-3 min-w-0">
+						<Avatar
 							src={friend.photoURL}
 							alt={friend.name || 'Friend'}
-							referrerPolicy="no-referrer"
-							className="w-8 h-8 rounded-full md:w-12 md:h-12 object-cover"
+							size={40}
+							className="md:w-12 md:h-12"
 						/>
-						<h1 className="text-sm text-center font-medium min-w-fit lg:text-base text-black">
+						<h1 className="text-sm text-center font-medium min-w-fit lg:text-base text-black truncate">
 							{friend.name}
 						</h1>
 					</div>
-					<div>
-						<button
-							className="bg-primary px-2 py-1 lg:text-base text-sm rounded text-white disabled:opacity-50"
-							onClick={() => handleOpenChat(friend)}
-							disabled={openingId === friend.id}
-						>
-							{openingId === friend.id ? 'Opening…' : 'Message'}
-						</button>
-					</div>
+					<Button
+						size="sm"
+						onClick={() => handleOpenChat(friend)}
+						disabled={openingId === friend.id}
+						loading={openingId === friend.id}
+					>
+						Message
+					</Button>
 				</div>
 			))}
 		</div>

@@ -1,12 +1,12 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { updateFriendData } from '../friends/friends.reducer';
-import * as friendService from '../../services/friendService';
-import * as notificationService from '../../services/notificationService';
+import * as friendService from '@/shared/api/friends';
+import * as notificationService from '@/shared/api/notifications';
 
-// Fetch all friend data from API (friends, requests, blocked, notifications)
 export const getInitialData = createAsyncThunk(
 	'friendData/getInitialData',
-	async (userId, { dispatch }) => {
+	async (userId: string, { dispatch }) => {
+		void userId;
 		const [friends, requests, blocked, notifs] = await Promise.all([
 			friendService.getFriends(),
 			friendService.getRequests(),
@@ -18,28 +18,31 @@ export const getInitialData = createAsyncThunk(
 	}
 );
 
-// Send friend request via API
 export const sendRequests = createAsyncThunk(
 	'friendData/sendRequests',
-	async ({ senderId, receiverId }) => {
-		const result = await friendService.sendRequest(receiverId);
-		return result;
+	async ({
+		senderId,
+		receiverId,
+	}: {
+		senderId: string;
+		receiverId: string;
+	}) => {
+		void senderId;
+		return friendService.sendRequest(receiverId);
 	}
 );
 
-// Accept friend request via API
 export const acceptRequest = createAsyncThunk(
 	'friendData/acceptRequest',
-	async ({ userId, senderId }) => {
+	async ({ userId, senderId }: { userId: string; senderId: string }) => {
 		const result = await friendService.acceptRequest(senderId);
 		return { ...result, userId, senderId };
 	}
 );
 
-// Reject friend request via API
 export const rejectRequest = createAsyncThunk(
 	'friendData/rejectRequest',
-	async ({ userId, senderId }) => {
+	async ({ userId, senderId }: { userId: string; senderId: string }) => {
 		const result = await friendService.rejectRequest(senderId);
 		return { ...result, userId, senderId };
 	}

@@ -121,25 +121,24 @@ const Chat = ({ inMobile }) => {
 	useEffect(() => {
 		if (!chatId) return;
 
-		let ws = null;
+		let cancelled = false;
+		let chatSocket = null;
 
 		const fetchAndConnect = async () => {
 			try {
-				// Fetch existing messages
 				const data = await chatService.getMessages(chatId);
+				if (cancelled) return;
 				setMessages({ messages: data.messages || [] });
 
-				// Mark chat as read
 				await chatService.markAsRead(chatId);
+				if (cancelled) return;
 				dispatch(markChatAsRead(chatId));
 
-				// Connect WebSocket for real-time new messages
-				ws = connectChat(chatId, (event) => {
+				chatSocket = connectChat(chatId, (event) => {
 					if (event.event === 'new_message') {
 						setMessages((prev) => {
 							const existingMessages = prev?.messages || [];
-							// Deduplicate based on backend SQL event ID 
-							if (existingMessages.some(m => m.id === event.id)) {
+							if (existingMessages.some((m) => m.id === event.id)) {
 								return prev;
 							}
 							return {
@@ -155,21 +154,29 @@ const Chat = ({ inMobile }) => {
 								],
 							};
 						});
+					} else if (event.event === 'message_deleted') {
+						setMessages((prev) => ({
+							messages: (prev?.messages || []).filter(
+								(m) => m.id !== event.messageId
+							),
+						}));
 					}
 				});
+				if (cancelled) {
+					chatSocket?.close?.();
+				}
 			} catch (error) {
-				console.error('Error fetching messages:', error);
+				if (!cancelled) console.error('Error fetching messages:', error);
 			}
 		};
 
 		fetchAndConnect();
 
 		return () => {
-			if (ws && ws.readyState === WebSocket.OPEN) {
-				ws.close();
-			}
+			cancelled = true;
+			chatSocket?.close?.();
 		};
-	}, [chatId, setMessages]);
+	}, [chatId, setMessages, dispatch]);
 
 	const [text, setText] = useState('');
 	const textBoxRef = useRef(null);

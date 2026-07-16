@@ -1,18 +1,24 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import * as chatService from '../../services/chatService';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import * as chatService from '@/shared/api/chats';
+import type { ChatListItem } from '@/shared/types/api';
 
-const INITIAL_STATE = {
+interface ChatsState {
+	chats: ChatListItem[];
+	loading: boolean;
+	error: string | null;
+}
+
+const INITIAL_STATE: ChatsState = {
 	chats: [],
 	loading: true,
 	error: null,
 };
 
-// Async thunk to fetch chats from API
+/** userId optional for callers that still pass it; API uses JWT identity */
 export const fetchChats = createAsyncThunk(
 	'chats/fetchChats',
-	async (userId) => {
-		const data = await chatService.getChats();
-		return data;
+	async (_userId?: string) => {
+		return chatService.getChats();
 	}
 );
 
@@ -20,28 +26,34 @@ const chatsSlice = createSlice({
 	name: 'chats',
 	initialState: INITIAL_STATE,
 	reducers: {
-		setChats: (state, action) => {
+		setChats: (state, action: PayloadAction<ChatListItem[]>) => {
 			state.chats = action.payload;
 		},
-		setLoading: (state, action) => {
+		setLoading: (state, action: PayloadAction<boolean>) => {
 			state.loading = action.payload;
 		},
-		setError: (state, action) => {
+		setError: (state, action: PayloadAction<string | null>) => {
 			state.error = action.payload;
 		},
-		// Update a single chat's last message (for WebSocket real-time updates)
-		updateChatLastMessage: (state, action) => {
+		updateChatLastMessage: (
+			state,
+			action: PayloadAction<{
+				chatId: string;
+				lastMessage: string;
+				type: string;
+				sentAt: string | null;
+			}>
+		) => {
 			const { chatId, lastMessage, type, sentAt } = action.payload;
 			const chat = state.chats.find((c) => c.chatId === chatId);
 			if (chat) {
 				chat.lastMessage = lastMessage;
-				chat.type = type;
+				chat.type = type as ChatListItem['type'];
 				chat.sentAt = sentAt;
 				chat.isSeen = false;
 			}
 		},
-		// Mark a chat as read
-		markChatAsRead: (state, action) => {
+		markChatAsRead: (state, action: PayloadAction<string>) => {
 			const chatId = action.payload;
 			const chat = state.chats.find((c) => c.chatId === chatId);
 			if (chat) {
@@ -60,7 +72,7 @@ const chatsSlice = createSlice({
 				state.error = null;
 			})
 			.addCase(fetchChats.rejected, (state, action) => {
-				state.error = action.error.message;
+				state.error = action.error.message ?? 'Failed to load chats';
 				state.loading = false;
 			});
 	},
