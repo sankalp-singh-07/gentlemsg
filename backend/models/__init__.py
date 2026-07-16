@@ -7,6 +7,7 @@ from models.friend_request import FriendRequest
 from models.notification import Notification
 from models.blocked_user import BlockedUser
 from models.group import Group, GroupMember, GroupMessage
+from models.call_log import CallLog
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "Group",
     "GroupMember",
     "GroupMessage",
+    "CallLog",
 ]

@@ -19,9 +19,10 @@ import { DialogContext } from '../../context/dialog.context';
 import Media from './childComponents/media.component';
 import { Avatar } from '@/shared/ui';
 import { formatLastSeen, displayTextMessage } from '@/shared/lib/messageDisplay';
-import { X, Smile, Paperclip, Send, Search } from 'lucide-react';
+import { X, Smile, Paperclip, Send, Search, Phone, Video } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useClickOutside } from '@/shared/hooks/useClickOutside';
+import { useCall } from '@/features/calls';
 
 const Chat = ({ inMobile }) => {
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -59,6 +60,7 @@ const Chat = ({ inMobile }) => {
 	const typingTimer = useRef(null);
 	const typingExpire = useRef(null);
 	const chatSocketRef = useRef(null);
+	const { startCall } = useCall();
 
 	useClickOutside(emojiWrapRef, () => setEmojiPickerOpen(false), emojiPickerOpen);
 
@@ -493,6 +495,50 @@ const Chat = ({ inMobile }) => {
 					</div>
 				</div>
 				<div className="icons gap-2">
+					{receiverData.id && !isUserBlocked && (
+						<>
+							<button
+								type="button"
+								className="p-2 rounded-lg hover:bg-black/5 text-primary"
+								onClick={() =>
+									startCall(
+										{
+											id: receiverData.id,
+											name:
+												receiverData.name ||
+												receiverData.userName,
+											photoURL: receiverData.photoURL,
+										},
+										'audio'
+									)
+								}
+								aria-label="Voice call"
+								title="Voice call"
+							>
+								<Phone size={18} />
+							</button>
+							<button
+								type="button"
+								className="p-2 rounded-lg hover:bg-black/5 text-primary"
+								onClick={() =>
+									startCall(
+										{
+											id: receiverData.id,
+											name:
+												receiverData.name ||
+												receiverData.userName,
+											photoURL: receiverData.photoURL,
+										},
+										'video'
+									)
+								}
+								aria-label="Video call"
+								title="Video call"
+							>
+								<Video size={18} />
+							</button>
+						</>
+					)}
 					<button
 						type="button"
 						className="p-2 rounded-lg hover:bg-black/5"

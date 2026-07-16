@@ -5,6 +5,7 @@ import { store } from '@/store/store';
 import { DarkModeProvider } from '@/context/dark.context';
 import { DialogProvider } from '@/context/dialog.context';
 import { MessageProvider } from '@/context/message.context';
+import { CallProvider } from '@/features/calls';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -20,17 +21,15 @@ interface ProvidersProps {
 	children: ReactNode;
 }
 
-/**
- * App-wide providers. FriendContext removed — search uses local state.
- * MessageContext remains until Phase 3 migrates messages to React Query.
- */
 export function Providers({ children }: ProvidersProps) {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<Provider store={store}>
 				<DarkModeProvider>
 					<DialogProvider>
-						<MessageProvider>{children}</MessageProvider>
+						<MessageProvider>
+							<CallProvider>{children}</CallProvider>
+						</MessageProvider>
 					</DialogProvider>
 				</DarkModeProvider>
 			</Provider>

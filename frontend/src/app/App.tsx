@@ -11,17 +11,16 @@ import {
 	setLoading,
 } from '@/store/user/user.reducer';
 import { getToken, getMe } from '@/shared/api/auth';
-import { connectPresence } from '@/shared/ws/presenceClient';
+import { presenceHub } from '@/shared/ws/presenceHub';
 import { fetchChats } from '@/store/chats/chats.reducer';
 import { getInitialData } from '@/store/thunks/thunks';
-import type { PresenceEvent } from '@/shared/types/api';
 import type { AppDispatch } from '@/store/store';
 
 function App() {
 	const dispatch = useDispatch<AppDispatch>();
 
 	useEffect(() => {
-		let disconnect: (() => void) | null = null;
+		let unsub: (() => void) | null = null;
 
 		const initAuth = async () => {
 			const token = getToken();
@@ -43,20 +42,29 @@ function App() {
 					})
 				);
 
-				const handleWsEvent = (event: PresenceEvent) => {
+				const handleWsEvent = (event: Record<string, unknown>) => {
 					if (!event?.event) return;
+					const ev = event.event as string;
 
-					switch (event.event) {
+					// Let CallProvider handle call_* / webrtc_* via its own subscription
+					if (
+						ev.startsWith('call_') ||
+						ev.startsWith('webrtc_')
+					) {
+						return;
+					}
+
+					switch (ev) {
 						case 'friend_request':
 							toast.info(
-								`New friend request from ${(event as { data?: { senderName?: string } }).data?.senderName || 'someone'}!`,
+								`New friend request from ${(event.data as { senderName?: string })?.senderName || 'someone'}!`,
 								{ position: 'top-right', autoClose: 5000 }
 							);
 							dispatch(getInitialData(user.id));
 							break;
 						case 'request_accepted':
 							toast.success(
-								`${(event as { data?: { acceptedByName?: string } }).data?.acceptedByName || 'User'} accepted your request!`,
+								`${(event.data as { acceptedByName?: string })?.acceptedByName || 'User'} accepted your request!`,
 								{ position: 'top-right', autoClose: 5000 }
 							);
 							dispatch(getInitialData(user.id));
@@ -64,7 +72,7 @@ function App() {
 							break;
 						case 'request_rejected':
 							toast.error(
-								`${(event as { data?: { rejectedByName?: string } }).data?.rejectedByName || 'User'} declined your request.`,
+								`${(event.data as { rejectedByName?: string })?.rejectedByName || 'User'} declined your request.`,
 								{ position: 'top-right', autoClose: 5000 }
 							);
 							dispatch(getInitialData(user.id));
@@ -76,6 +84,7 @@ function App() {
 							dispatch(fetchChats(user.id));
 							break;
 						case 'chats_updated':
+						case 'groups_updated':
 							dispatch(fetchChats(user.id));
 							break;
 						default:
@@ -83,10 +92,8 @@ function App() {
 					}
 				};
 
-				const presence = connectPresence(user.id, handleWsEvent);
-				if (presence) {
-					disconnect = () => presence.disconnect();
-				}
+				unsub = presenceHub.subscribe(handleWsEvent);
+				presenceHub.connect(user.id);
 			} catch (error) {
 				console.error('Auth check failed:', error);
 				dispatch(clearCurrentUser());
@@ -98,7 +105,8 @@ function App() {
 		void initAuth();
 
 		return () => {
-			disconnect?.();
+			unsub?.();
+			presenceHub.disconnect();
 		};
 	}, [dispatch]);
 
