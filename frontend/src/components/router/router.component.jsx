@@ -8,6 +8,7 @@ import { selectCurrentUser } from '../../store/user/user.selector';
 import '../../styles/components/loader.css';
 import ContactUs from '../contact-us/contactUs.component';
 import FAQ from '../faq/faq.component';
+import AuthCallback from '../auth/AuthCallback';
 
 const Router = () => {
 	const { currentUser, loading } = useSelector(selectCurrentUser);
@@ -30,6 +31,7 @@ const Router = () => {
 					path="/admin"
 					element={currentUser ? <Admin /> : <Navigate to="/" />}
 				/>
+				<Route path="/auth/callback" element={<AuthCallback />} />
 				<Route path="*" element={<NotFound />} />
 				<Route path="/contact-us" element={<ContactUs />} />
 				<Route path="/faqs" element={<FAQ />} />

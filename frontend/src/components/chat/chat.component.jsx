@@ -4,8 +4,10 @@ import Messages from './childComponents/messages.component';
 import EmojiPicker from 'emoji-picker-react';
 import { MessageContext } from '../../context/message.context';
 import { useContext } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentUser } from '../../store/user/user.selector';
+import { selectChats } from '../../store/chats/chats.selector';
+import { markChatAsRead } from '../../store/chats/chats.reducer';
 import * as chatService from '../../services/chatService';
 import * as userService from '../../services/userService';
 import { connectChat } from '../../services/websocket';
@@ -33,7 +35,9 @@ const Chat = ({ inMobile }) => {
 
 	const { chatId, setMessages } = useContext(MessageContext);
 	const { currentUser } = useSelector(selectCurrentUser);
+	const { chats } = useSelector(selectChats);
 	const { blocked } = useSelector(friendSelector);
+	const dispatch = useDispatch();
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [blockText, setBlockText] = useState('');
@@ -71,13 +75,31 @@ const Chat = ({ inMobile }) => {
 	useEffect(() => {
 		if (!currentUser || !chatId) return;
 
-		const receiverId = chatId
-			.split('-')
-			.filter((el) => el !== currentUser.id)[0];
-		if (!receiverId) return;
-
 		const fetchReceiver = async () => {
 			try {
+				let receiverId = null;
+
+				// Try to find the receiver in the quick Redux cached list
+				if (chats && chats.length > 0) {
+					const currentChat = chats.find((c) => c.chatId === chatId);
+					if (currentChat) {
+						receiverId = currentChat.receiverId;
+					}
+				}
+
+				// If Redux is empty (e.g. mobile hard refresh), forcefully query the DB
+				if (!receiverId) {
+					const remoteChat = await chatService.getChat(chatId);
+					if (remoteChat) {
+						receiverId =
+							remoteChat.user1_id === currentUser.id
+								? remoteChat.user2_id
+								: remoteChat.user1_id;
+					}
+				}
+
+				if (!receiverId) return;
+
 				const data = await userService.getUser(receiverId);
 				setReceiverData({
 					id: data.id,
@@ -93,7 +115,7 @@ const Chat = ({ inMobile }) => {
 		};
 
 		fetchReceiver();
-	}, [chatId, currentUser]);
+	}, [chatId, currentUser, chats]);
 
 	// Fetch messages from API + connect WebSocket for real-time
 	useEffect(() => {
@@ -109,21 +131,30 @@ const Chat = ({ inMobile }) => {
 
 				// Mark chat as read
 				await chatService.markAsRead(chatId);
+				dispatch(markChatAsRead(chatId));
 
 				// Connect WebSocket for real-time new messages
 				ws = connectChat(chatId, (event) => {
 					if (event.event === 'new_message') {
-						setMessages((prev) => ({
-							messages: [
-								...(prev?.messages || []),
-								{
-									senderId: event.senderId,
-									message: event.message,
-									type: event.type,
-									sentAt: event.sentAt,
-								},
-							],
-						}));
+						setMessages((prev) => {
+							const existingMessages = prev?.messages || [];
+							// Deduplicate based on backend SQL event ID 
+							if (existingMessages.some(m => m.id === event.id)) {
+								return prev;
+							}
+							return {
+								messages: [
+									...existingMessages,
+									{
+										id: event.id,
+										senderId: event.senderId,
+										message: event.message,
+										type: event.type,
+										sentAt: event.sentAt,
+									},
+								],
+							};
+						});
 					}
 				});
 			} catch (error) {
@@ -156,11 +187,12 @@ const Chat = ({ inMobile }) => {
 	};
 
 	const handleSend = async () => {
-		if (text.trim() === '' || isUserBlocked) return;
+		if (text.trim() === '' || isUserBlocked || !receiverData.id) return;
 
 		try {
-			// Removed insecure frontend encryption. Messages are now secured in transit via HTTPS/WSS
-			await chatService.sendMessage(chatId, text, 'text');
+			const encryptionKey = generateKey(currentUser.id, receiverData.id);
+			const encryptedText = encryptMessage(text, encryptionKey);
+			await chatService.sendMessage(chatId, encryptedText, 'text');
 			setText('');
 		} catch (error) {
 			console.error('Error sending message:', error);
@@ -199,8 +231,9 @@ const Chat = ({ inMobile }) => {
 					{receiverData.photoURL ? (
 						<img
 							src={receiverData.photoURL}
-							alt="profile"
-							className="w-8 h-8 sm:w-12 sm:h-12 rounded-full mr-4"
+							alt="Profile"
+							referrerPolicy="no-referrer"
+							className="w-11 h-11 rounded-full object-cover"
 						/>
 					) : (
 						<img
@@ -238,7 +271,7 @@ const Chat = ({ inMobile }) => {
 				{openMediaDialog && <Media />}
 			</div>
 			<div className="middle scrollbar-hide">
-				<Messages receiverImg={receiverData.photoURL} />
+				<Messages receiverImg={receiverData.photoURL} receiverId={receiverData.id || ''} />
 				<div ref={lastMessageShowRef} />
 			</div>
 			<div className="bottom mt-2">

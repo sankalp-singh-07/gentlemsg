@@ -8,8 +8,8 @@ class ConnectionManager:
     def __init__(self):
         # chat_id -> list of WebSocket connections
         self.chat_connections: dict[str, list[WebSocket]] = {}
-        # user_id -> WebSocket connection (for presence/notifications)
-        self.user_connections: dict[str, WebSocket] = {}
+        # user_id -> list of WebSocket connections (for presence/notifications)
+        self.user_connections: dict[str, list[WebSocket]] = {}
 
     async def connect_chat(self, chat_id: str, websocket: WebSocket):
         await websocket.accept()
@@ -26,17 +26,16 @@ class ConnectionManager:
 
     async def connect_user(self, user_id: str, websocket: WebSocket):
         await websocket.accept()
-        # Close existing connection if any (single connection per user)
-        if user_id in self.user_connections:
-            try:
-                await self.user_connections[user_id].close()
-            except Exception:
-                pass
-        self.user_connections[user_id] = websocket
+        if user_id not in self.user_connections:
+            self.user_connections[user_id] = []
+        self.user_connections[user_id].append(websocket)
 
-    async def disconnect_user(self, user_id: str):
+    async def disconnect_user(self, user_id: str, websocket: WebSocket):
         if user_id in self.user_connections:
-            del self.user_connections[user_id]
+            if websocket in self.user_connections[user_id]:
+                self.user_connections[user_id].remove(websocket)
+            if not self.user_connections[user_id]:
+                del self.user_connections[user_id]
 
     async def broadcast_to_chat(self, chat_id: str, message: dict):
         """Send a message to all connections in a chat room."""
@@ -53,12 +52,19 @@ class ConnectionManager:
                     self.chat_connections[chat_id].remove(conn)
 
     async def send_to_user(self, user_id: str, message: dict):
-        """Send a message to a specific user's presence connection."""
+        """Send a message to a specific user's presence connections."""
         if user_id in self.user_connections:
-            try:
-                data = json.dumps(message, default=str)
-                await self.user_connections[user_id].send_text(data)
-            except Exception:
+            data = json.dumps(message, default=str)
+            disconnected = []
+            for connection in self.user_connections[user_id]:
+                try:
+                    await connection.send_text(data)
+                except Exception:
+                    disconnected.append(connection)
+            for conn in disconnected:
+                if conn in self.user_connections.get(user_id, []):
+                    self.user_connections[user_id].remove(conn)
+            if user_id in self.user_connections and not self.user_connections[user_id]:
                 del self.user_connections[user_id]
 
     async def broadcast_to_users(self, user_ids: list[str], message: dict):

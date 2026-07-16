@@ -11,6 +11,17 @@ export const getChats = async () => {
 	}
 };
 
+// Get a single chat
+export const getChat = async (chatId) => {
+	try {
+		const response = await api.get(`/chats/${chatId}`);
+		return response.data;
+	} catch (error) {
+		console.error('Failed to fetch chat by ID:', error);
+		throw error;
+	}
+};
+
 // Create a new chat with a user
 export const createChat = async (receiverId) => {
 	try {

@@ -13,7 +13,7 @@ class Notification(Base):
     from_user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)  # accepted, rejected
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     __table_args__ = (

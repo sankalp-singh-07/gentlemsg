@@ -14,7 +14,7 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String, default="text")  # text, image, video, document
     sent_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     # Soft delete — messages are hidden, not permanently removed
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")

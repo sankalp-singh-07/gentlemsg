@@ -16,8 +16,8 @@ class User(Base):
     user_name: Mapped[str] = mapped_column(String, nullable=True, default="")
     is_online: Mapped[bool] = mapped_column(Boolean, default=False)
     last_active: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

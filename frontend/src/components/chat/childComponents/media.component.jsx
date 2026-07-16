@@ -17,13 +17,18 @@ const Media = () => {
 
 			try {
 				const data = await chatService.getMedia(chatId);
+				const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+				
 				// API returns array of { url, content_type, filename }
 				setMediaData(
 					Array.isArray(data)
-						? data.map((item) => ({
-								url: item.url,
-								contentType: item.content_type || '',
-						  }))
+						? data.map((item) => {
+								const fullUrl = item.url.startsWith('/uploads') ? `${API_URL}${item.url}` : item.url;
+								return {
+									url: fullUrl,
+									contentType: item.contentType || '',
+								}
+						  })
 						: []
 				);
 			} catch (error) {

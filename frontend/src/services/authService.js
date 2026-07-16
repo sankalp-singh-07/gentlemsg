@@ -11,16 +11,8 @@ export const getToken = () => {
 };
 
 // Remove JWT token
-export const removeToken = () => {
+export const clearToken = () => {
   localStorage.removeItem("auth-token");
-};
-
-// Google login — send Google ID token to backend, receive JWT
-export const googleLogin = async (idToken) => {
-  const response = await api.post("/auth/google", { token: idToken });
-  const { access_token, user } = response.data;
-  setToken(access_token);
-  return user;
 };
 
 // Get current user profile from JWT
@@ -45,6 +37,6 @@ export const logout = async () => {
     // Logout even if backend call fails
     console.error("Logout API error:", error);
   } finally {
-    removeToken();
+    clearToken();
   }
 };

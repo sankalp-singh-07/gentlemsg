@@ -16,6 +16,8 @@ const UpdateProfile = () => {
 	const { setOpenProfileDialog } = useContext(DialogContext);
 	const [changePic, setChangePic] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	const [usernameError, setUsernameError] = useState('');
+	const [suggestions, setSuggestions] = useState([]);
 
 	const handleProfilePicChange = (e) => {
 		const file = e.target.files[0];
@@ -28,6 +30,9 @@ const UpdateProfile = () => {
 	const handleSaveChange = async () => {
 		try {
 			setIsSaving(true);
+			setUsernameError('');
+			setSuggestions([]);
+			
 			await userService.updateProfile({
 				name: profileName,
 				user_name: username,
@@ -44,7 +49,13 @@ const UpdateProfile = () => {
 			setOpenProfileDialog(false);
 		} catch (error) {
 			console.error('Error updating profile:', error);
-			alert('Failed to update profile');
+			if (error.response?.status === 409 && error.response.data?.detail) {
+				const detail = error.response.data.detail;
+				setUsernameError(detail.message || 'Username already taken');
+				setSuggestions(detail.suggestions || []);
+			} else {
+				alert('Failed to update profile');
+			}
 		} finally {
 			setIsSaving(false);
 		}
@@ -89,7 +100,8 @@ const UpdateProfile = () => {
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
 						<img
 							src={currentUser?.photoURL}
-							className="w-16 h-16 rounded-full"
+							referrerPolicy="no-referrer"
+							className="w-16 h-16 rounded-full object-cover"
 						/>
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
@@ -107,17 +119,45 @@ const UpdateProfile = () => {
 							Change Profile Picture
 						</label>
 					</div>
-					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
-						<label className="text-sm text-start text-black cursor-pointer">
-							Username
-						</label>
-						<input
-							type="text"
-							placeholder="Enter username"
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
-							className="w-full outline-none py-1 px-3 bg-tertiary text-black"
-						/>
+					<div className="flex flex-col gap-1 w-full justify-center">
+						<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1 w-full">
+							<label className="text-sm text-start text-black cursor-pointer min-w-[65px]">
+								Username
+							</label>
+							<input
+								type="text"
+								placeholder="Enter username"
+								value={username}
+								onChange={(e) => setUsername(e.target.value)}
+								className="w-full outline-none py-1 px-3 bg-tertiary text-black"
+							/>
+						</div>
+						{usernameError && (
+							<p className="text-red-500 text-xs text-start w-full pl-[86px]">{usernameError}</p>
+						)}
+						{suggestions.length > 0 && (
+							<div className="flex flex-col gap-2 w-full pl-[86px] justify-start text-xs mt-1">
+								<span className="text-black font-semibold">Available usernames:</span>
+								<div className="flex gap-2 flex-wrap">
+									{suggestions.map((sugg) => (
+										<button 
+											key={sugg}
+											type="button" 
+											className="bg-black text-white px-3 py-1.5 rounded-md cursor-pointer hover:bg-gray-800 transition-colors shadow-sm text-sm font-medium"
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												setUsername(sugg);
+												setUsernameError('');
+												setSuggestions([]);
+											}}
+										>
+											{sugg}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
 					</div>
 					<div className="flex justify-center items-center gap-3 min-w-36 mr-1 ml-1">
 						<label className="text-sm text-start text-black cursor-pointer">

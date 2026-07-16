@@ -11,6 +11,7 @@ from schemas.message import MessageCreate
 from services.chat_service import (
     get_or_create_chat,
     get_user_chats,
+    get_chat_by_id,
     get_messages,
     send_message,
     upload_media,
@@ -19,6 +20,7 @@ from services.chat_service import (
     verify_chat_participant,
 )
 from websocket.manager import manager
+from services.user_service import get_user_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,6 @@ async def create_chat(
     current_user: dict = Depends(get_current_user),
 ):
     """Create a chat between current user and receiver."""
-    from services.user_service import get_user_by_id
     receiver = await get_user_by_id(body.receiver_id, db)
     if not receiver:
         raise HTTPException(status_code=404, detail="Receiver not found")
@@ -68,6 +69,33 @@ async def list_messages(
 
     messages = await get_messages(chat_id, db, limit=limit, offset=offset)
     return {"messages": messages}
+
+
+@router.get("/{chat_id}")
+async def get_chat(
+    chat_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single chat by ID."""
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    chat = await get_chat_by_id(chat_id, db)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+        
+    return {
+        "id": chat.id,
+        "user1_id": chat.user1_id,
+        "user2_id": chat.user2_id,
+        "last_message": chat.last_message,
+        "last_message_type": chat.last_message_type,
+        "last_message_at": chat.last_message_at,
+        "is_read_by_user1": chat.is_read_by_user1,
+        "is_read_by_user2": chat.is_read_by_user2,
+        "created_at": chat.created_at,
+    }
 
 
 @router.post("/{chat_id}/messages")
@@ -101,6 +129,12 @@ async def create_message(
         "sentAt": message.sent_at.isoformat(),
     }
     await manager.broadcast_to_chat(chat_id, msg_data)
+
+    chat = await get_chat_by_id(chat_id, db)
+    if chat:
+        receiver_id = chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        await manager.send_to_user(receiver_id, {"event": "chats_updated"})
+        await manager.send_to_user(current_user["id"], {"event": "chats_updated"})
 
     return msg_data
 
@@ -208,6 +242,12 @@ async def upload_chat_media(
         "sentAt": None,
     }
     await manager.broadcast_to_chat(chat_id, msg_data)
+
+    chat = await get_chat_by_id(chat_id, db)
+    if chat:
+        receiver_id = chat.user2_id if chat.user1_id == current_user["id"] else chat.user1_id
+        await manager.send_to_user(receiver_id, {"event": "chats_updated"})
+        await manager.send_to_user(current_user["id"], {"event": "chats_updated"})
 
     return result
 

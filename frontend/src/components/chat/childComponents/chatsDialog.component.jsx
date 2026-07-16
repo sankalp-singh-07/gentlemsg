@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { DialogContext } from '../../../context/dialog.context';
-import BlockUser from '../../friends/blockUser.component';
 import { MessageContext } from '../../../context/message.context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { friendSelector } from '../../../store/friends/friends.selector';
 import { selectCurrentUser } from '../../../store/user/user.selector';
-import UnblockUser from '../../friends/unblockUser.component';
+import { getInitialData } from '../../../store/thunks/thunks';
+import * as friendService from '../../../services/friendService';
 import dots1 from '../../../assets/dots1.png';
 import dots2 from '../../../assets/dots.png';
 import { DarkModeContext } from '../../../context/dark.context';
@@ -17,10 +17,10 @@ const ChatsDialog = () => {
 	const { blocked } = useSelector(friendSelector);
 	const { setOpenMediaDialog } = useContext(DialogContext);
 	const { isDark } = useContext(DarkModeContext);
+	const dispatch = useDispatch();
 
 	const [isUserBlocked, setIsUserBlocked] = useState(false);
 	const [isUserBlockOther, setIsUserBlockOther] = useState(false);
-	const [blockAction, setBlockAction] = useState(null);
 
 	const menuRef = useRef(null);
 
@@ -50,8 +50,17 @@ const ChatsDialog = () => {
 		};
 	}, []);
 
-	const handleBlockUser = () => {
-		setBlockAction(isUserBlocked && isUserBlockOther ? 'unblock' : 'block');
+	const handleBlockUser = async () => {
+		try {
+			if (isUserBlocked && isUserBlockOther) {
+				await friendService.unblockUser(chatId);
+			} else {
+				await friendService.blockUser(chatId);
+			}
+			dispatch(getInitialData(currentUser.id));
+		} catch (error) {
+			console.error('Error toggling block status:', error);
+		}
 	};
 
 	return (
@@ -89,9 +98,6 @@ const ChatsDialog = () => {
 				className="cursor-pointer w-6 h-6"
 				onClick={() => setOpenChatsDialog(!openChatsDialog)}
 			/>
-
-			{blockAction === 'block' && <BlockUser chatId={chatId} />}
-			{blockAction === 'unblock' && <UnblockUser chatId={chatId} />}
 		</div>
 	);
 };

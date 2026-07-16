@@ -36,18 +36,20 @@ const UserChats = () => {
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
-	const showLatestMessage = (message, chatId, type) => {
+	const showLatestMessage = (message, receiverId, type) => {
 		if (!message) return 'Start Conversation';
 
 		if (type === 'text') {
 			// Try to decrypt
-			const userIds = chatId.split('-');
-			const encryptionKey = generateKey(userIds[0], userIds[1]);
+			const encryptionKey = generateKey(userId, receiverId);
 			const decryptedMessage = decryptMessage(message, encryptionKey);
-			if (!decryptedMessage) return message?.length > 17 ? `${message.slice(0, 17)}...` : message;
-			return decryptedMessage.length > 17
-				? `${decryptedMessage.slice(0, 17)}...`
-				: decryptedMessage;
+			
+			// If decryption fails, it's likely a legacy plaintext message, so fallback to raw
+			const textToDisplay = decryptedMessage || message;
+			
+			return textToDisplay.length > 17
+				? `${textToDisplay.slice(0, 17)}...`
+				: textToDisplay;
 		} else if (type === 'image') return '[Image]';
 		else if (type === 'document') return '[Document]';
 		else if (type === 'video') return '[Video]';
@@ -81,6 +83,7 @@ const UserChats = () => {
 									<img
 										src={chat.receiverPhotoURL}
 										alt="..."
+										referrerPolicy="no-referrer"
 										className="avatar"
 									/>
 								) : (
@@ -95,7 +98,7 @@ const UserChats = () => {
 									<p>
 										{showLatestMessage(
 											chat.lastMessage,
-											chat.chatId,
+											chat.receiverId,
 											chat.type
 										)}
 									</p>

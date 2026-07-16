@@ -3,11 +3,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, and_
 
 from websocket.manager import manager
 from core.security import verify_ws_token
 from db.database import async_session
 from models.user import User
+from models.chat import Friendship
 from sqlalchemy import select
 
 router = APIRouter()
@@ -49,6 +51,21 @@ async def presence_websocket(
             db_user.is_online = True
             db_user.last_active = datetime.now(timezone.utc)
             await session.commit()
+            
+            # Fetch user friends to notify them
+            friends_result = await session.execute(
+                select(Friendship).where(
+                    or_(Friendship.user1_id == user_id, Friendship.user2_id == user_id)
+                )
+            )
+            friends = friends_result.scalars().all()
+            friend_ids = [f.user2_id if f.user1_id == user_id else f.user1_id for f in friends]
+            
+            # Broadcast to friends
+            await manager.broadcast_to_users(friend_ids, {
+                "event": "user_online",
+                "userId": user_id
+            })
 
     try:
         while True:
@@ -69,13 +86,30 @@ async def presence_websocket(
     except WebSocketDisconnect:
         pass
     finally:
-        await manager.disconnect_user(user_id)
+        await manager.disconnect_user(user_id, websocket)
 
-        # Set user offline in DB
-        async with async_session() as session:
-            result = await session.execute(select(User).where(User.id == user_id))
-            db_user = result.scalar_one_or_none()
-            if db_user:
-                db_user.is_online = False
-                db_user.last_active = datetime.now(timezone.utc)
-                await session.commit()
+        # Only set offline if no other connections (tabs/devices) are open for this user
+        if user_id not in manager.user_connections:
+            # Set user offline in DB
+            async with async_session() as session:
+                result = await session.execute(select(User).where(User.id == user_id))
+                db_user = result.scalar_one_or_none()
+                if db_user:
+                    db_user.is_online = False
+                    db_user.last_active = datetime.now(timezone.utc)
+                    await session.commit()
+                    
+                    # Fetch user friends to notify them
+                    friends_result = await session.execute(
+                        select(Friendship).where(
+                            or_(Friendship.user1_id == user_id, Friendship.user2_id == user_id)
+                        )
+                    )
+                    friends = friends_result.scalars().all()
+                    friend_ids = [f.user2_id if f.user1_id == user_id else f.user1_id for f in friends]
+                    
+                    # Broadcast to friends
+                    await manager.broadcast_to_users(friend_ids, {
+                        "event": "user_offline",
+                        "userId": user_id
+                    })

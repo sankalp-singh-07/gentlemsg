@@ -55,6 +55,7 @@ const Notifs = () => {
 							<img
 								src={notif.photoURL}
 								alt="..."
+								referrerPolicy="no-referrer"
 								className="w-10 h-10 rounded-full"
 							/>
 							<p className="text-md text-start text-black">

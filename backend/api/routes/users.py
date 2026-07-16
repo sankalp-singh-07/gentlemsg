@@ -67,6 +67,20 @@ async def update_user_profile(
     current_user: dict = Depends(get_current_user),
 ):
     """Update current user's name and/or username."""
+    from services.user_service import is_username_taken, generate_username_suggestions
+    
+    if body.user_name:
+        is_taken = await is_username_taken(body.user_name, db, exclude_user_id=current_user["id"])
+        if is_taken:
+            suggestions = await generate_username_suggestions(body.user_name, db)
+            raise HTTPException(
+                status_code=409, 
+                detail={
+                    "message": "Username has already been taken.",
+                    "suggestions": suggestions
+                }
+            )
+
     user = await update_profile(current_user["id"], body.model_dump(exclude_none=True), db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -14,13 +14,13 @@ class Chat(Base):
     last_message: Mapped[str] = mapped_column(String, default="Start Conversation")
     last_message_type: Mapped[str] = mapped_column(String, default="text")
     last_message_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     last_message_sender_id: Mapped[str] = mapped_column(String, nullable=True)
     is_read_by_user1: Mapped[bool] = mapped_column(Boolean, default=True)
     is_read_by_user2: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     __table_args__ = (
@@ -36,7 +36,7 @@ class Friendship(Base):
     user1_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     user2_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     __table_args__ = (

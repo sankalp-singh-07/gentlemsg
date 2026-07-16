@@ -12,10 +12,6 @@ from models.user import User
 from models.blocked_user import BlockedUser
 from core.config import settings
 from fastapi import HTTPException
-from better_profanity import profanity
-
-# Load default swearing words
-profanity.load_censor_words()
 
 
 async def verify_chat_participant(chat_id: str, user_id: str, db: AsyncSession) -> bool:
@@ -27,6 +23,12 @@ async def verify_chat_participant(chat_id: str, user_id: str, db: AsyncSession) 
         return False
     
     return user_id in (chat.user1_id, chat.user2_id)
+
+
+async def get_chat_by_id(chat_id: str, db: AsyncSession) -> Chat:
+    """Get a specific chat by ID."""
+    result = await db.execute(select(Chat).where(Chat.id == chat_id))
+    return result.scalar_one_or_none()
 
 
 
@@ -167,16 +169,12 @@ async def send_message(
     if blocked_check.scalar_one_or_none():
         raise HTTPException(status_code=403, detail="Cannot send message - user is blocked")
 
-    # Moderate content (censor profanity)
-    if msg_type == "text":
-        content = profanity.censor(content)
-
     message = Message(
         chat_id=chat_id,
         sender_id=sender_id,
         content=content,
         type=msg_type,
-        sent_at=datetime.now(timezone.utc),
+        sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(message)
 
@@ -186,7 +184,7 @@ async def send_message(
     if chat:
         chat.last_message = content if msg_type == "text" else "[File]"
         chat.last_message_type = msg_type
-        chat.last_message_at = datetime.now(timezone.utc)
+        chat.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
         chat.last_message_sender_id = sender_id
 
         # Mark as read for sender, unread for receiver
@@ -239,7 +237,7 @@ async def upload_media(
     # Sanitize and generate unique filename
     safe_name = sanitize_filename(file.filename) if file.filename else "file"
     ext = os.path.splitext(safe_name)[1] or ""
-    filename = f"{int(datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:8]}{ext}"
+    filename = f"{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:8]}{ext}"
     filepath = os.path.join(upload_dir, filename)
 
     with open(filepath, "wb") as f:

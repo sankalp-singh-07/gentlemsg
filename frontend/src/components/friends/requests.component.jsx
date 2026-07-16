@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { friendSelector } from '../../store/friends/friends.selector';
 import { selectCurrentUser } from '../../store/user/user.selector';
 import { acceptRequest, rejectRequest } from '../../store/thunks/thunks';
+import { fetchChats } from '../../store/chats/chats.reducer';
 import * as chatService from '../../services/chatService';
 
 const Requests = () => {
@@ -10,13 +11,12 @@ const Requests = () => {
 	const dispatch = useDispatch();
 
 	const handleAccept = async (senderId) => {
-		dispatch(acceptRequest({ userId: currentUser.id, senderId }));
-		// Create chat after accepting
-		try {
-			await chatService.createChat(senderId);
-		} catch (error) {
-			console.error('Error creating chat:', error);
-		}
+		dispatch(acceptRequest({ userId: currentUser.id, senderId }))
+			.unwrap()
+			.then(() => {
+				dispatch(fetchChats(currentUser.id));
+			})
+			.catch((error) => console.error('Error accepting request:', error));
 	};
 
 	const handleReject = (senderId) => {
@@ -41,7 +41,8 @@ const Requests = () => {
 								<img
 									src={req.senderPhotoURL}
 									alt="..."
-									className="sm:w-12 sm:h-12 rounded-full w-8 h-8"
+									referrerPolicy="no-referrer"
+									className="sm:w-12 sm:h-12 rounded-full w-8 h-8 object-cover"
 								/>
 								<h1 className="text-sm text-center font-medium min-w-fit lg:text-base">
 									{req.senderName}
@@ -79,7 +80,8 @@ const Requests = () => {
 								<img
 									src={req.receiverPhotoURL}
 									alt="..."
-									className="w-12 h-12 rounded-full"
+									referrerPolicy="no-referrer"
+									className="w-12 h-12 rounded-full object-cover"
 								/>
 								<h1 className="text-sm text-center font-medium min-w-fit lg:text-base">
 									{req.receiverName}

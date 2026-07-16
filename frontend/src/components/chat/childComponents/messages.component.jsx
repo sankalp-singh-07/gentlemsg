@@ -4,15 +4,12 @@ import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../../store/user/user.selector';
 import { decryptMessage, generateKey } from '../../../utils/encryption';
 
-const Messages = ({ receiverImg }) => {
+const Messages = ({ receiverImg, receiverId }) => {
 	const { messages, chatId } = useContext(MessageContext);
 	const messagesArr = messages.messages || [];
 
 	const { currentUser } = useSelector(selectCurrentUser);
 	const { receiverInfo, setReceiverInfo } = useState([]);
-	const receiverId = chatId
-		.split('-')
-		.filter((el) => el !== currentUser?.id)[0];
 
 	// Scroll
 	const messagesEndRef = useRef(null);
@@ -28,19 +25,26 @@ const Messages = ({ receiverImg }) => {
 		return new Intl.DateTimeFormat('en-US', options).format(date);
 	};
 
-	const showDecryptedMessage = (message, chatId, type) => {
-		const userIds = chatId.split('-');
-		const encryptionKey = generateKey(userIds[0], userIds[1]);
+	const showDecryptedMessage = (message, type) => {
+		let encryptionKey = null;
+		if (receiverId && currentUser?.id) {
+			encryptionKey = generateKey(currentUser.id, receiverId);
+		}
 
 		if (type === 'text') {
 			const decryptedMessage = decryptMessage(message, encryptionKey);
-			return decryptedMessage || 'Failed to get message';
+			return decryptedMessage || message;
 		} else if (
 			type === 'image' ||
 			type === 'document' ||
 			type === 'video'
 		) {
-			return message.map((url) => [url, type]);
+			const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+			const urls = Array.isArray(message) ? message : [message];
+			return urls.map((url) => {
+				const fullUrl = url.startsWith('/uploads') ? `${API_URL}${url}` : url;
+				return [fullUrl, type];
+			});
 		}
 	};
 
@@ -50,7 +54,6 @@ const Messages = ({ receiverImg }) => {
 				const isOwn = message.senderId === currentUser.id;
 				const decryptedContent = showDecryptedMessage(
 					message.message,
-					chatId,
 					message.type
 				);
 

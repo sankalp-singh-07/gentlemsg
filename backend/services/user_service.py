@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 
 from models.user import User
 from core.config import settings
@@ -15,9 +15,53 @@ async def get_user_by_id(user_id: str, db: AsyncSession) -> User | None:
     return result.scalar_one_or_none()
 
 
+async def is_username_taken(username: str, db: AsyncSession, exclude_user_id: str = None) -> bool:
+    stmt = select(User).where(func.lower(User.user_name) == username.lower())
+    if exclude_user_id:
+        stmt = stmt.where(User.id != exclude_user_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none() is not None
+
+
+async def generate_unique_username(base_name: str, db: AsyncSession) -> str:
+    base = base_name.lower().replace(" ", "")
+    if not base:
+        base = "user"
+    
+    if not await is_username_taken(base, db):
+        return base
+        
+    import random
+    import string
+    
+    while True:
+        suffix = ''.join(random.choices(string.digits, k=4))
+        new_username = f"{base}{suffix}"
+        if not await is_username_taken(new_username, db):
+            return new_username
+
+
+async def generate_username_suggestions(base_name: str, db: AsyncSession, count: int = 3) -> list[str]:
+    suggestions = []
+    base = base_name.lower().replace(" ", "")
+    if not base:
+        base = "user"
+        
+    import random
+    import string
+    
+    while len(suggestions) < count:
+        suffix = ''.join(random.choices(string.digits, k=4))
+        new_username = f"{base}{suffix}"
+        if not await is_username_taken(new_username, db) and new_username not in suggestions:
+            suggestions.append(new_username)
+            
+    return suggestions
+
+
 async def search_users(username: str, db: AsyncSession) -> list[User]:
     result = await db.execute(
-        select(User).where(User.user_name == username)
+        select(User).where(func.lower(User.user_name).like(f"{username.lower()}%"))
     )
     return list(result.scalars().all())
 
@@ -42,7 +86,7 @@ async def update_status(user_id: str, is_online: bool, db: AsyncSession) -> User
         return None
 
     user.is_online = is_online
-    user.last_active = datetime.now(timezone.utc)
+    user.last_active = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.flush()
     return user
 
@@ -68,8 +112,10 @@ async def update_avatar(user_id: str, file, db: AsyncSession) -> str | None:
     with open(filepath, "wb") as f:
         f.write(content)
 
-    # Update user photo URL (relative path for serving)
-    photo_url = f"/uploads/profile_pictures/{filename}"
+    # Update user photo URL (absolute path for serving via API base URL or FRONTEND_URL if separate asset server)
+    # Using FRONTEND_URL or API BASE to construct full path so frontend doesn't need to guess
+    # Assuming FastAPI serves these statically at /uploads from the API URL
+    photo_url = f"{settings.API_BASE_URL.rstrip('/')}/uploads/profile_pictures/{filename}" if hasattr(settings, 'API_BASE_URL') else f"http://localhost:8000/uploads/profile_pictures/{filename}"
     user.photo_url = photo_url
     await db.flush()
 

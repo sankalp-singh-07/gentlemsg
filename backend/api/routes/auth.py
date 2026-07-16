@@ -1,47 +1,85 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from starlette.responses import JSONResponse
 
+from core.constants import ACCESS_TOKEN_TYPE
 from db.database import get_db
-from core.security import get_current_user, create_access_token, verify_token
+from core.security import get_current_user, create_token, verify_refresh_token
 from core.limiter import limiter
-from schemas.auth import GoogleAuthRequest, TokenResponse
 from services.auth_service import authenticate_with_google
 from services.user_service import get_user_by_id, update_status
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+@router.get("/google/login")
+async def google_login():
+    """Redirect to Google's OAuth 2.0 consent screen."""
+    google_auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={settings.GOOGLE_CLIENT_ID}&"
+        f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
+        f"response_type=code&"
+        f"scope=openid profile email&"
+        f"access_type=offline&"
+        f"prompt=consent"
+    )
+    return RedirectResponse(google_auth_url)
 
-@router.post("/google", response_model=TokenResponse)
-@limiter.limit("10/minute")
-async def google_login(
+
+@router.get("/google/callback")
+async def google_callback(
     request: Request,
-    body: GoogleAuthRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Authenticate with Google OAuth. Rate limited: 10/minute."""
-    logger.info(f"Google login attempt from {get_remote_address(request)}")
-    result = await authenticate_with_google(body.token, db)
-    return result
+    """Handle Google OAuth callback, authenticate user, and redirect to frontend with token."""
+    code = request.query_params.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="Authorization code missing")
+
+    try:
+        result = await authenticate_with_google(code, db)
+        redirect_url = f"{settings.FRONTEND_URL}/auth/callback"
+        response = RedirectResponse(redirect_url)
+        response.set_cookie(
+            key="refresh_token",
+            value=result["refresh_token"],
+            httponly=True,
+            secure=settings.ENVIRONMENT == "production",
+            samesite="lax",
+            path="/",
+            max_age=60 * 60 * 24 * 4
+        )
+        return response
+
+    except Exception as e:
+        logger.error(f"Google OAuth callback error: {str(e)}")
+        # Redirect to frontend login with error indicator if needed, or raise exception
+        return RedirectResponse(f"{settings.FRONTEND_URL}/?error=oauth_failed")
 
 
 @router.post("/refresh")
 @limiter.limit("30/minute")
-async def refresh_token(
-    request: Request,
-    current_user: dict = Depends(get_current_user),
-):
-    """Refresh JWT token. Rate limited: 30/minute."""
-    new_token = create_access_token(
-        data={"sub": current_user["id"], "email": current_user["email"]}
-    )
-    return {"access_token": new_token, "token_type": "bearer"}
+async def refresh_access_token(request: Request):
 
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+
+    payload = verify_refresh_token(refresh_token)
+
+    new_access_token = create_token({
+        "sub": payload["sub"],
+        "email": payload["email"]
+    }, ACCESS_TOKEN_TYPE)
+
+    return {"access_token": new_access_token}
 
 @router.post("/logout")
 async def logout(
@@ -51,7 +89,13 @@ async def logout(
     """Set user offline on logout."""
     await update_status(current_user["id"], False, db)
     logger.info(f"User {current_user['id']} logged out")
-    return {"message": "Logged out successfully"}
+    response = JSONResponse({"message": "Logged out successfully"})
+    response.delete_cookie(
+        "refresh_token",
+        path="/",
+        samesite="lax"
+    )
+    return response
 
 
 @router.get("/me")
@@ -59,7 +103,6 @@ async def get_me(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get the current authenticated user's profile."""
     user = await get_user_by_id(current_user["id"], db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -23,9 +23,9 @@ const DropDownSetting = () => {
 		setIsRotated(!isRotated);
 	};
 
-	const handleLogOut = () => {
+	const handleLogOut = async () => {
 		setShowDropDownSettings(false);
-		SignOutHandler();
+		await SignOutHandler();
 	};
 
 	const handleFriendsDialog = (e) => {

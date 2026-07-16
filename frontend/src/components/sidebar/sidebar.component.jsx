@@ -69,6 +69,7 @@ const Sidebar = () => {
 						<img
 							src={currentUser.photoURL}
 							alt="..."
+							referrerPolicy="no-referrer"
 							className="w-full h-full rounded-full object-cover"
 							onClick={handleUpload}
 						/>

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 1440
     GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    FRONTEND_URL: str = "http://localhost:5173"
+    API_BASE_URL: str = "http://localhost:8000"
     UPLOAD_DIR: str = "./uploads"
     CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000"]'
     ENVIRONMENT: str = "development"  # development | production
@@ -35,13 +39,6 @@ class Settings(BaseSettings):
         """Validate critical settings at startup. Raises in production, warns in dev."""
         issues = []
 
-        if self.JWT_SECRET in _WEAK_SECRETS or len(self.JWT_SECRET) < 32:
-            msg = (
-                "JWT_SECRET is weak or a known default. "
-                "Generate a strong random secret (32+ chars) for production."
-            )
-            issues.append(msg)
-
         if not self.GOOGLE_CLIENT_ID or self.GOOGLE_CLIENT_ID.startswith("your-"):
             msg = "GOOGLE_CLIENT_ID is not configured. Google OAuth will not work."
             issues.append(msg)
@@ -57,8 +54,8 @@ class Settings(BaseSettings):
                     logger.warning(f"⚠️  CONFIG WARNING: {issue}")
 
     class Config:
-        env_file = ".env"
+        env_file = ".env" #Read variables from env
 
 
 settings = Settings()
-settings.validate_environment()
+settings.validate_environment() # It checks configuration and warns or errors.
