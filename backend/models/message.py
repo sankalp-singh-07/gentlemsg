@@ -9,8 +9,12 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    chat_id: Mapped[str] = mapped_column(String, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False, index=True)
-    sender_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    chat_id: Mapped[str] = mapped_column(
+        String, ForeignKey("chats.id", ondelete="CASCADE"), nullable=False
+    )
+    sender_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String, default="text")  # text, image, video, document
     sent_at: Mapped[datetime] = mapped_column(
@@ -23,4 +27,5 @@ class Message(Base):
         Index("idx_message_chat_id", "chat_id"),
         Index("idx_message_sender_id", "sender_id"),
         Index("idx_message_chat_sent", "chat_id", "sent_at"),
+        Index("idx_message_chat_sent_desc", "chat_id", "sent_at"),
     )

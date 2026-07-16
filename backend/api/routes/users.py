@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db
 from core.security import get_current_user
+from core.limiter import limiter
 from schemas.user import UserProfileUpdate, UserStatusUpdate
 from services.user_service import (
     search_users,
@@ -18,19 +19,20 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/search")
+@limiter.limit("60/minute")
 async def search(
-    username: str,
+    request: Request,
+    username: str = Query(..., min_length=1, max_length=64),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Search users by username."""
+    """Search users by username. Rate limited: 60/minute. Email is not returned."""
     users = await search_users(username, db)
     return [
         {
             "uid": u.id,
             "id": u.id,
             "name": u.name,
-            "email": u.email,
             "photoURL": u.photo_url,
             "userName": u.user_name,
         }
@@ -49,10 +51,10 @@ async def get_user(
     user = await get_user_by_id(user_id, db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    # Do not expose other users' email addresses
     return {
         "id": user.id,
         "name": user.name,
-        "email": user.email,
         "photoURL": user.photo_url,
         "userName": user.user_name,
         "isOnline": user.is_online,

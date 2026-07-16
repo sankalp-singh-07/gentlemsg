@@ -10,16 +10,12 @@ from slowapi.errors import RateLimitExceeded
 
 from core.config import settings
 from core.limiter import limiter
+from core.exceptions import register_exception_handlers
 from db.base import Base
 from db.database import engine
 
 # Import all models so they register with Base.metadata
-from models.user import User
-from models.chat import Chat, Friendship
-from models.message import Message
-from models.friend_request import FriendRequest
-from models.notification import Notification
-from models.blocked_user import BlockedUser
+import models  # noqa: F401
 
 # Import route modules
 from api.routes import auth, users, chats, friends, notifications
@@ -35,8 +31,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gentlemsg")
 
-# ── Rate Limiter ─────────────────────────────────────────────────────
-
 # Create uploads directories at import time (StaticFiles requires directory to exist)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(os.path.join(settings.UPLOAD_DIR, "profile_pictures"), exist_ok=True)
@@ -46,16 +40,22 @@ os.makedirs(os.path.join(settings.UPLOAD_DIR, "chats"), exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting GentleMSG API...")
+    logger.info("Database: %s", settings.database_dialect)
+    logger.info("Environment: %s", settings.ENVIRONMENT)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    logger.info("Database tables ready")
+    # Dev convenience: ensure tables exist. Prefer `alembic upgrade head` in production.
+    if settings.AUTO_CREATE_TABLES:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables ready (create_all)")
+    else:
+        logger.info("AUTO_CREATE_TABLES=false — use Alembic migrations")
 
     yield
 
     logger.info("Shutting down GentleMSG API...")
     await engine.dispose()
+
 
 tags_metadata = [
     {"name": "auth", "description": "Authentication and user login"},
@@ -68,7 +68,7 @@ tags_metadata = [
 app = FastAPI(
     title="GentleMSG API",
     description="Backend API for GentleMSG messaging application.",
-    version="1.0.0",
+    version="1.1.0",
     openapi_tags=tags_metadata,
     lifespan=lifespan,
     contact={
@@ -78,11 +78,15 @@ app = FastAPI(
 )
 
 # Register rate limiter
-app.state.limiter = limiter # type: ignore
+app.state.limiter = limiter  # type: ignore
 app.add_exception_handler(
     RateLimitExceeded,
     lambda request, exc: _rate_limit_exceeded_handler(request, exc),
 )
+
+# Consistent JSON error envelope
+register_exception_handlers(app)
+
 # CORS middleware — restricted methods and headers
 app.add_middleware(
     CORSMiddleware,
@@ -92,8 +96,16 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
-# Mount static file serving for uploads
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+# Static uploads: public only when explicitly enabled (default true in development)
+if settings.SERVE_UPLOADS_PUBLIC:
+    app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+    if settings.is_production:
+        logger.warning(
+            "SERVE_UPLOADS_PUBLIC=true in production — prefer auth-gated "
+            "GET /api/v1/chats/{chat_id}/files/{filename}"
+        )
+else:
+    logger.info("Public /uploads disabled; use auth-gated chat file endpoint")
 
 # API v1 Router
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -103,21 +115,25 @@ api_v1_router.include_router(friends.router)
 api_v1_router.include_router(chats.router)
 api_v1_router.include_router(notifications.router)
 
-# REST API routers
 app.include_router(api_v1_router)
 
-# WebSocket routers
+# WebSocket routers (in-memory ConnectionManager — single process only)
 app.include_router(chat_ws.router)
 app.include_router(presence_ws.router)
 
 
 @app.get("/")
 async def root():
-    return {"message": "GentleMSG is running!"}
+    return {"message": "GentleMSG is running!", "version": "1.1.0"}
 
 
 @app.get("/health")
 async def health_check():
     from datetime import datetime, timezone
-    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "environment": settings.ENVIRONMENT,
+        "database": settings.database_dialect,
+    }

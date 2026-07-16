@@ -161,8 +161,9 @@ async def accept_request(user_id: str, sender_id: str, db: AsyncSession) -> dict
 
     request.status = "accepted"
 
-    # Create friendship
-    friendship = Friendship(user1_id=user_id, user2_id=sender_id)
+    # Create friendship with ordered pair for unique constraint stability
+    u1, u2 = (user_id, sender_id) if user_id < sender_id else (sender_id, user_id)
+    friendship = Friendship(user1_id=u1, user2_id=u2)
     db.add(friendship)
 
     # Create chat

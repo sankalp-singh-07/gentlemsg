@@ -32,8 +32,20 @@ async def get_chat_by_id(chat_id: str, db: AsyncSession) -> Chat:
 
 
 
+def _ordered_pair(a: str, b: str) -> tuple[str, str]:
+    """Return (user1_id, user2_id) with lexicographic order for unique pair constraint."""
+    return (a, b) if a < b else (b, a)
+
+
 async def get_or_create_chat(user1_id: str, user2_id: str, db: AsyncSession) -> Chat:
-    """Get existing chat between two users or create a new one."""
+    """Get existing chat between two users or create a new one.
+
+    Always stores user1_id < user2_id so the unique pair constraint is stable.
+    Lookup still accepts either order for legacy rows.
+    """
+    if user1_id == user2_id:
+        raise HTTPException(status_code=400, detail="Cannot create a chat with yourself")
+
     result = await db.execute(
         select(Chat).where(
             or_(
@@ -45,9 +57,10 @@ async def get_or_create_chat(user1_id: str, user2_id: str, db: AsyncSession) -> 
     chat = result.scalar_one_or_none()
 
     if not chat:
+        ordered_u1, ordered_u2 = _ordered_pair(user1_id, user2_id)
         chat = Chat(
-            user1_id=user1_id,
-            user2_id=user2_id,
+            user1_id=ordered_u1,
+            user2_id=ordered_u2,
         )
         db.add(chat)
         await db.flush()
@@ -200,6 +213,39 @@ async def send_message(
 
     await db.flush()
     return message
+
+
+async def soft_delete_message(
+    chat_id: str,
+    message_id: str,
+    user_id: str,
+    db: AsyncSession,
+) -> dict:
+    """Soft-delete a message. Only the sender may delete. Returns status dict."""
+    if not await verify_chat_participant(chat_id, user_id, db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    result = await db.execute(
+        select(Message).where(
+            Message.id == message_id,
+            Message.chat_id == chat_id,
+        )
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    if message.sender_id != user_id:
+        raise HTTPException(status_code=403, detail="Can only delete your own messages")
+
+    if message.is_deleted:
+        return {"message": "Message already deleted", "messageId": message_id}
+
+    message.is_deleted = True
+    message.content = ""  # Clear content for privacy
+    await db.flush()
+    return {"message": "Message deleted", "messageId": message_id}
 
 
 async def mark_chat_read(chat_id: str, user_id: str, db: AsyncSession) -> bool:

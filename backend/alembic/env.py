@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config import settings
 from db.base import Base
-import models  # import models to register with Base.metadata
+from db.database import normalize_database_url
+import models  # noqa: F401 — register models with Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -46,7 +47,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = settings.DATABASE_URL
+    url = normalize_database_url(settings.DATABASE_URL)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -71,7 +72,7 @@ async def run_async_migrations() -> None:
     """
 
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
+    configuration["sqlalchemy.url"] = normalize_database_url(settings.DATABASE_URL)
 
     connectable = AsyncEngine(
         engine_from_config(

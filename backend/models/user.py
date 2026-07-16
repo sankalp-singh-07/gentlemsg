@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Boolean, DateTime
+from sqlalchemy import String, Boolean, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from db.base import Base
 
@@ -20,4 +20,8 @@ class User(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+
+    __table_args__ = (
+        Index("idx_users_user_name", "user_name"),
     )

@@ -18,6 +18,7 @@ from services.chat_service import (
     get_chat_media,
     mark_chat_read,
     verify_chat_participant,
+    soft_delete_message,
 )
 from websocket.manager import manager
 from services.user_service import get_user_by_id
@@ -147,47 +148,31 @@ async def delete_message(
     current_user: dict = Depends(get_current_user),
 ):
     """Soft-delete a message (only the sender can delete)."""
-    from sqlalchemy import select
-    from models.message import Message
-
-    result = await db.execute(
-        select(Message).where(
-            Message.id == message_id,
-            Message.chat_id == chat_id,
-        )
+    result = await soft_delete_message(
+        chat_id=chat_id,
+        message_id=message_id,
+        user_id=current_user["id"],
+        db=db,
     )
-    message = result.scalar_one_or_none()
 
-    if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
-        
-    if not await verify_chat_participant(chat_id, current_user["id"], db):
-        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
-        
-    if message.sender_id != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Can only delete your own messages")
-
-    message.is_deleted = True
-    message.content = ""  # Clear content for privacy
-    await db.flush()
-
-    # Notify chat room about deletion
     await manager.broadcast_to_chat(chat_id, {
         "event": "message_deleted",
         "messageId": message_id,
     })
 
     logger.info(f"Message {message_id} soft-deleted by {current_user['id']}")
-    return {"message": "Message deleted"}
+    return result
 
 
 @router.post("/{chat_id}/typing")
+@limiter.limit("30/minute")
 async def typing_indicator(
+    request: Request,
     chat_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Send a typing indicator to the chat room via WebSocket."""
+    """Send a typing indicator to the chat room via WebSocket. Rate limited: 30/minute."""
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
@@ -215,13 +200,15 @@ async def mark_read(
 
 
 @router.post("/{chat_id}/media")
+@limiter.limit("30/minute")
 async def upload_chat_media(
+    request: Request,
     chat_id: str,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    """Upload media file and create a message for it."""
+    """Upload media file and create a message for it. Rate limited: 30/minute."""
     if not await verify_chat_participant(chat_id, current_user["id"], db):
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
@@ -263,3 +250,33 @@ async def list_chat_media(
         raise HTTPException(status_code=403, detail="Not authorized to access this chat")
 
     return await get_chat_media(chat_id)
+
+
+@router.get("/{chat_id}/files/{filename}")
+async def download_chat_file(
+    chat_id: str,
+    filename: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Auth-gated download for a chat attachment (participant only).
+
+    Prefer this over public /uploads when SERVE_UPLOADS_PUBLIC is false.
+    """
+    import os
+    from fastapi.responses import FileResponse
+    from core.config import settings
+    from utils import sanitize_filename
+
+    if not await verify_chat_participant(chat_id, current_user["id"], db):
+        raise HTTPException(status_code=403, detail="Not authorized to access this chat")
+
+    safe_name = sanitize_filename(filename)
+    if safe_name != filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    filepath = os.path.join(settings.UPLOAD_DIR, "chats", chat_id, safe_name)
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(filepath)

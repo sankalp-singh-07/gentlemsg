@@ -10,7 +10,6 @@ from core.security import verify_ws_token
 from db.database import async_session
 from models.user import User
 from models.chat import Friendship
-from sqlalchemy import select
 
 router = APIRouter()
 
