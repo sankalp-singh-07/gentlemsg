@@ -40,7 +40,7 @@ const ContactUs = () => {
 	};
 
 	return (
-		<div className="bg-tertiary h-screen w-screen flex items-center justify-center">
+		<div className="bg-tertiary min-h-dvh w-full flex items-center justify-center overflow-auto px-4 py-8">
 			<div className="container mx-auto py-12">
 				<div className="max-w-lg mx-auto px-4">
 					<h2 className="text-4xl font-bold text-black mb-7">

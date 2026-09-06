@@ -1,5 +1,5 @@
 .sidebar {
-    @apply flex flex-col flex-grow-[2] md:flex-grow-[5] lg:flex-grow flex-shrink basis-0 bg-quatery h-screen w-full max-w-full min-w-[16rem] sm:min-w-[18rem] overflow-hidden;
+    @apply flex flex-col flex-grow-[2] md:flex-grow-[5] lg:flex-grow flex-shrink basis-0 bg-quatery h-full w-full max-w-full min-w-0 md:min-w-[16rem] lg:min-w-[18rem] overflow-hidden;
 }
 
 .top {

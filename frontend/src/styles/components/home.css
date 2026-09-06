@@ -1,13 +1,13 @@
 .logo {
-	@apply text-center text-lg sm:text-3xl font-semibold text-black;
+	@apply text-center text-base sm:text-3xl font-semibold text-black truncate min-w-0;
 }
 
 .container-1 {
-	@apply flex w-screen h-14 justify-between px-3 items-center;
+	@apply flex w-full h-14 justify-between px-3 items-center gap-2 min-w-0;
 }
 
 .contact {
-	@apply text-sm sm:text-lg  font-medium sm:font-semibold text-black;
+	@apply text-xs sm:text-lg font-medium sm:font-semibold text-black shrink-0;
 }
 
 .dot {
@@ -19,11 +19,11 @@
 }
 
 .container {
-	@apply flex flex-row items-center justify-center;
+	@apply flex flex-row flex-wrap items-center justify-center min-w-0;
 }
 
 .sub-heading {
-	@apply font-medium text-black text-lg mb-6 sm:mb-10 text-center max-w-3xl mx-auto;
+	@apply font-medium text-black text-sm sm:text-lg mb-6 sm:mb-10 text-center max-w-[18rem] sm:max-w-3xl mx-auto px-4 w-full break-words;
 }
 
 .home-cta {

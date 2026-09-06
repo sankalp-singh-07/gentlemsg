@@ -76,7 +76,7 @@ const SendMedia = ({
 	return (
 		<>
 			{filesArr.length > 0 && (
-				<div className="bg-secondary md:w-6/12 h-fit w-10/12 max-h-96 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md overflow-scroll">
+				<div className="bg-secondary fixed z-50 overflow-auto shadow-md inset-4 max-h-[80dvh] rounded-xl md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(32rem,90vw)] md:max-h-96">
 					<div className="w-full h-fit">
 						<div>
 							<p className="text-tertiary">Preview</p>

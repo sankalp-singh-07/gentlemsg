@@ -574,7 +574,7 @@ const Chat = ({ inMobile }) => {
 
 	return (
 		<div
-			className={`chat ${inMobile === 'hidden' && 'max-[650px]:hidden'} relative`}
+			className={`chat ${inMobile === 'hidden' ? 'max-md:hidden' : 'chat-standalone'} relative`}
 			onDragOver={(e) => {
 				e.preventDefault();
 				if (!isUserBlocked) setDragOver(true);
@@ -810,8 +810,8 @@ const Chat = ({ inMobile }) => {
 									<div className="absolute bottom-12 left-0 z-30 shadow-xl">
 										<EmojiPicker
 											onEmojiClick={handleEmoji}
-											width={300}
-											height={380}
+											width={Math.min(300, (typeof window !== 'undefined' ? window.innerWidth : 300) - 24)}
+											height={Math.min(380, (typeof window !== 'undefined' ? window.innerHeight : 380) * 0.45)}
 											theme={isDark ? 'dark' : 'light'}
 										/>
 									</div>
@@ -826,7 +826,7 @@ const Chat = ({ inMobile }) => {
 											? 'Edit message…'
 											: 'Type a message'
 								}
-								className="w-full h-full outline-none px-2 py-3 bg-transparent text-black"
+								className="w-full h-full outline-none px-2 py-3 bg-transparent text-black text-base"
 								onChange={(e) => {
 									setText(e.target.value);
 									notifyTyping();

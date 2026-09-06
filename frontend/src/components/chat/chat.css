@@ -1,5 +1,5 @@
 .chat {
-    @apply flex-grow-[3] md:flex-grow-[11] lg:flex-grow-[3] flex-shrink basis-0 bg-tertiary h-screen w-full flex flex-col min-h-0 min-w-0;
+    @apply flex-grow-[3] md:flex-grow-[11] lg:flex-grow-[3] flex-shrink basis-0 bg-tertiary h-full w-full flex flex-col min-h-0 min-w-0;
 }
 
 .userDetails {
@@ -19,7 +19,8 @@
 }
 
 .bottom {
-    @apply flex items-center justify-between w-full px-2 sm:px-4 pb-3 pt-1 shrink-0 bg-tertiary;
+    @apply flex items-center justify-between w-full px-2 sm:px-4 pt-1 shrink-0 bg-tertiary;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
     border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -142,8 +143,13 @@
     @apply shrink-0;
 }
 
-/* Mobile full-screen chat */
-@media (max-width: 650px) {
+/* Mobile full-screen conversation (route /chat) */
+.chat-standalone {
+    @apply h-full w-full max-w-full;
+    height: 100dvh;
+}
+
+@media (max-width: 767px) {
     .chat {
         @apply max-w-full w-full;
     }

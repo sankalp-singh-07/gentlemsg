@@ -6,9 +6,12 @@ import { Avatar, Button, Modal } from '@/shared/ui';
 import { toast } from 'react-toastify';
 import { useContext } from 'react';
 import { MessageContext } from '@/context/message.context';
+import { useNavigate } from 'react-router-dom';
+import { isMobileLayout } from '@/shared/lib/layout';
 
 const CreateGroup = ({ open, onClose, onCreated }) => {
 	const { setGroupId } = useContext(MessageContext);
+	const navigate = useNavigate();
 	const { friends } = useSelector(friendSelector);
 	const [name, setName] = useState('');
 	const [description, setDescription] = useState('');
@@ -38,6 +41,7 @@ const CreateGroup = ({ open, onClose, onCreated }) => {
 			setDescription('');
 			setSelected([]);
 			setGroupId(group.id);
+			if (isMobileLayout()) navigate('/chat');
 			onCreated?.(group);
 			onClose?.();
 		} catch (e) {

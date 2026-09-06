@@ -92,7 +92,7 @@ const UpdateProfile = () => {
 
 	return (
 		<>
-			<div className="bg-secondary max-md:w-8/12 max-lg:w-6/12 w-3/12 h-fit max-h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-md rounded-lg">
+			<div className="bg-secondary text-black fixed z-40 overflow-auto shadow-md inset-0 rounded-none p-1 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(24rem,90vw)] md:max-h-[85vh] md:rounded-lg">
 				<div
 					className="h-full overflow-scroll scrollbar-hide p-4 grid gap-4 grid-flow-row"
 					style={{ gridTemplateColumns: '1fr', gridAutoRows: 'auto' }}

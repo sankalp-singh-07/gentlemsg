@@ -10,6 +10,7 @@ import { unfriendUser } from '../../store/thunks/thunks';
 import { toast } from 'react-toastify';
 import { Avatar, EmptyState, Button } from '@/shared/ui';
 import { formatLastSeen } from '@/shared/lib/messageDisplay';
+import { isMobileLayout } from '@/shared/lib/layout';
 
 const FriendsList = () => {
 	const { friends } = useSelector(friendSelector);
@@ -31,7 +32,7 @@ const FriendsList = () => {
 			const chatId = chat.id;
 			if (!chatId) throw new Error('No chat id returned');
 			setChatId(chatId);
-			if (window.innerWidth <= 600) navigate('/chat');
+			if (isMobileLayout()) navigate('/chat');
 			setOpenFriendsDialog(false);
 		} catch (error) {
 			console.error('Failed to open chat:', error);

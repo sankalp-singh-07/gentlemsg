@@ -21,7 +21,7 @@ const Home = () => {
 	const { isDark } = useContext(DarkModeContext);
 
 	return (
-		<>
+		<div className="w-full max-w-full overflow-x-hidden">
 			<div className="container-1">
 				<div className="w-fit flex justify-between items-center px-5 py-3">
 					<DarkMode />
@@ -30,7 +30,8 @@ const Home = () => {
 					Gentle<span className="dot">.</span>MSG
 				</p>
 				<Link className="contact" to="/contact-us">
-					CONTACT US
+					<span className="sm:hidden">CONTACT</span>
+					<span className="hidden sm:inline">CONTACT US</span>
 				</Link>
 			</div>
 
@@ -63,9 +64,9 @@ const Home = () => {
 						</span>
 					</h1>
 				</div>
-				<h1 className="heading text-6xl !leading-[140%] md:text-5xl lg:text-7xl md:hidden mt-6 sm:mt-24 mb-3 sm:mb-8 text-black font-bold text-center">
-					Message in{' '}
-					<span className="relative text-primary border-[3px] px-3 border-primary inline-block">
+				<h1 className="heading text-4xl leading-tight md:hidden mt-6 mb-3 text-black font-bold text-center px-5">
+					<span className="block">Message in</span>
+					<span className="relative text-primary border-[3px] px-3 border-primary inline-block mt-2">
 						Motion
 						<div className="w-3 h-3 bg-primary absolute -top-[4px] -left-[4px]" />
 						<div className="w-3 h-3 bg-primary absolute -top-[4px] -right-[4px]" />
@@ -83,9 +84,11 @@ const Home = () => {
 				<h3 className="heading text-4xl max-md:hidden md:text-2xl lg:text-4xl mb-6 md:mb-10 text-primary font-semibold">
 					Start Your Journey
 				</h3>
-				<h3 className="heading text-2xl max-sm:text-xl md:hidden px-3 mb-6 text-primary font-semibold !leading-7 text-center">
-					<span className="text-black">One Click Away —</span> Start
-					Your Journey
+				<h3 className="heading text-lg sm:text-2xl md:hidden w-full max-w-full px-4 mb-6 text-primary font-semibold leading-snug text-center break-words">
+					<span className="text-black block sm:inline">
+						One Click Away —
+					</span>{' '}
+					<span className="block sm:inline">Start Your Journey</span>
 				</h3>
 			</div>
 
@@ -100,7 +103,7 @@ const Home = () => {
 				<SignIn />
 			</div>
 
-			<div className="flex w-full h-80 sm:h-52 space-x-6 items-end px-8 mb-6 max-lg:mt-6">
+			<div className="flex w-full h-80 sm:h-52 gap-4 items-end px-4 sm:px-8 mb-6 max-lg:mt-6 min-w-0">
 				<div className="flex-1 h-80 sm:h-52 bg-secondary rounded-lg overflow-hidden">
 					<img
 						className="w-full h-full  hidden lg:block"
@@ -164,7 +167,7 @@ const Home = () => {
 					/>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };
 

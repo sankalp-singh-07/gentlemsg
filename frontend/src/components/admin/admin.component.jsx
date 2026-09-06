@@ -85,7 +85,7 @@ const Admin = () => {
 	}, [setOpenProfileDialog]);
 
 	return (
-		<div className="w-screen h-screen flex">
+		<div className="app-frame">
 			<Dashboard />
 			<div ref={friendsDialogRef}>
 				{openFriendsDialog && <UsersManagement />}

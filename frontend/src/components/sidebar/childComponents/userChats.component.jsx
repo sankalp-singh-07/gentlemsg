@@ -11,6 +11,7 @@ import { Avatar, ChatListSkeleton, EmptyState } from '@/shared/ui';
 import { pinChat, unpinChat } from '@/shared/api/chats';
 import { Pin } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { isMobileLayout } from '@/shared/lib/layout';
 
 const UserChats = () => {
 	const { chats, loading, error } = useSelector(selectChats);
@@ -27,7 +28,7 @@ const UserChats = () => {
 
 	const handleClick = (chatId) => {
 		setChatId(chatId);
-		if (window.innerWidth <= 600) {
+		if (isMobileLayout()) {
 			navigate('/chat');
 		}
 	};

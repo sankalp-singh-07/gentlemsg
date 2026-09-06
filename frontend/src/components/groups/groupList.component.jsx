@@ -5,6 +5,7 @@ import { Avatar, Skeleton } from '@/shared/ui';
 import { formatDayLabel, previewLastMessage } from '@/shared/lib/messageDisplay';
 import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { isMobileLayout } from '@/shared/lib/layout';
 
 const GroupList = ({ refreshKey = 0 }) => {
 	const [groups, setGroups] = useState([]);
@@ -64,7 +65,7 @@ const GroupList = ({ refreshKey = 0 }) => {
 						}`}
 						onClick={() => {
 							setGroupId(g.id);
-							if (window.innerWidth <= 600) navigate('/chat');
+							if (isMobileLayout()) navigate('/chat');
 						}}
 					>
 						{g.avatarURL ? (

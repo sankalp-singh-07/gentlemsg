@@ -19,7 +19,7 @@ const AuthCallback = () => {
     }, [searchParams, navigate]);
 
     return (
-        <div className="w-full h-screen flex justify-center items-center">
+        <div className="w-full h-dvh flex justify-center items-center">
             <div className="loader"></div>
             <p className="ml-4">Authenticating...</p>
         </div>

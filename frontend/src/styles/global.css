@@ -1,3 +1,11 @@
+html,
+body,
+#root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+}
+
 body {
     @apply font-sans;
     background-color: var(--color-tertiary);
@@ -5,6 +13,14 @@ body {
     /* Do not center the whole app — breaks chat list, profile, notifications */
     text-align: left;
     color: var(--color-black);
+    overflow-x: hidden;
+}
+
+/* Logged-in shell fills the visual viewport (avoids iOS 100vh clipping) */
+.app-frame {
+    @apply w-full min-h-0 flex overflow-hidden;
+    height: 100dvh;
+    max-height: 100dvh;
 }
 
 

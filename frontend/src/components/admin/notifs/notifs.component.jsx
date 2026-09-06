@@ -53,7 +53,7 @@ const Notifs = () => {
 	};
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-6/12 max-h-[70vh] absolute m-auto top-0 right-0 bottom-0 left-0 shadow-lg rounded-xl overflow-hidden z-40 flex flex-col">
+		<div className="bg-secondary fixed z-40 overflow-hidden shadow-lg flex flex-col inset-0 rounded-none md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(36rem,90vw)] md:max-h-[70vh] md:rounded-xl">
 			<div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
 				<h2 className="font-semibold text-black">Notifications</h2>
 				<button

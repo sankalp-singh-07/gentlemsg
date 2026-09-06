@@ -31,7 +31,7 @@ const Dashboard = () => {
 	return (
 		<div className="dashboard">
 			<Sidebar />
-			<div className="h-full w-1.5 bg-[#B8D9FF]"></div>
+			<div className="dashboard-split" />
 			{main}
 		</div>
 	);

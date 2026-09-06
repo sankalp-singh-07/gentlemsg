@@ -17,6 +17,7 @@ import {
 import { Search, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { previewLastMessage } from '@/shared/lib/messageDisplay';
+import { isMobileLayout } from '@/shared/lib/layout';
 
 const GlobalSearch = () => {
 	const [open, setOpen] = useState(false);
@@ -71,7 +72,7 @@ const GlobalSearch = () => {
 	const openChat = async (chatId) => {
 		setChatId(chatId);
 		setOpen(false);
-		if (window.innerWidth <= 600) navigate('/chat');
+		if (isMobileLayout()) navigate('/chat');
 	};
 
 	const openChatWithUser = async (userId) => {
@@ -115,8 +116,8 @@ const GlobalSearch = () => {
 	}
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4 bg-black/40">
-			<div className="bg-secondary w-full max-w-lg rounded-xl shadow-2xl overflow-hidden">
+		<div className="fixed inset-0 z-50 flex items-stretch md:items-start justify-center md:pt-[10vh] p-0 md:px-4 bg-black/40">
+			<div className="bg-secondary w-full md:max-w-lg rounded-none md:rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-full md:max-h-[80vh]">
 				<div className="flex items-center gap-2 px-3 py-3 border-b border-black/10">
 					<Search size={18} className="text-black/40" />
 					<input
@@ -124,7 +125,7 @@ const GlobalSearch = () => {
 						value={term}
 						onChange={(e) => setTerm(e.target.value)}
 						placeholder="Search users and chats…"
-						className="flex-1 bg-transparent outline-none text-black"
+						className="flex-1 bg-transparent outline-none text-black text-base"
 					/>
 					<button
 						type="button"
@@ -136,7 +137,7 @@ const GlobalSearch = () => {
 					</button>
 				</div>
 
-				<div className="max-h-[60vh] overflow-y-auto p-3">
+				<div className="flex-1 min-h-0 max-h-none md:max-h-[60vh] overflow-y-auto p-3">
 					{term.trim().length < 2 && recent.length > 0 && (
 						<div className="mb-3">
 							<div className="flex justify-between mb-1">
@@ -193,7 +194,7 @@ const GlobalSearch = () => {
 											onClick={() => {
 												setGroupId(g.id);
 												setOpen(false);
-												if (window.innerWidth <= 600) navigate('/chat');
+												if (isMobileLayout()) navigate('/chat');
 											}}
 										>
 											<div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">

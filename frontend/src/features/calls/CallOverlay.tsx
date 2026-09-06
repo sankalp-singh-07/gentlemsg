@@ -140,7 +140,7 @@ export function CallOverlay({
 							: 'Voice call';
 
 	return (
-		<div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#0b1220]">
+		<div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#0b1220]" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
 			{/* Solid card — no transparency so chat never shows through */}
 			<div className="relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl border border-[#1e2a3a] bg-[#111827] text-white">
 				{/* Top accent bar */}

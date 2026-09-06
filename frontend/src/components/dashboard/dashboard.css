@@ -1,9 +1,13 @@
 .dashboard {
-    @apply flex items-stretch h-screen w-full overflow-hidden;
+    @apply flex items-stretch h-full w-full min-h-0 overflow-hidden;
 }
 
-/* Mobile: sidebar full width until chat opens via /chat route */
-@media (max-width: 650px) {
+.dashboard-split {
+    @apply h-full w-1.5 bg-[#B8D9FF] shrink-0 max-md:hidden;
+}
+
+/* Phone + portrait tablet: list only; conversation is /chat */
+@media (max-width: 767px) {
     .dashboard {
         @apply flex-col;
     }

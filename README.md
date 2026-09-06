@@ -180,6 +180,39 @@ WebSockets:
 
 ---
 
+## Deploy (free)
+
+**Frontend → [Vercel](https://vercel.com)** (Hobby). Root directory: `frontend`. Env: `VITE_API_URL=https://<your-api>.onrender.com` (no trailing slash).
+
+**Backend → [Render](https://render.com)** (free web service). Railway has no lasting free tier (trial credit only). Render is the one that stays $0; the instance **sleeps after ~15 minutes idle** and takes ~30–60s to wake (WebSockets drop while asleep).
+
+1. Create a [Neon](https://neon.tech) free Postgres database (Render’s free disk is ephemeral — SQLite and `uploads/` will vanish on restart).
+2. New Web Service from this repo, **root directory `backend`**, or use `render.yaml`.
+   - Build: `pip install -r requirements.txt`
+   - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+3. Set env vars (see `backend/.env.example`):
+
+| Variable | Production value |
+|----------|------------------|
+| `ENVIRONMENT` | `production` |
+| `DATABASE_URL` | Neon URL (`postgresql://…` is auto-normalized to asyncpg) |
+| `AUTO_CREATE_TABLES` | `false` |
+| `JWT_SECRET` | long random string |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | same OAuth client |
+| `GOOGLE_REDIRECT_URI` | `https://<api>.onrender.com/api/v1/auth/google/callback` |
+| `FRONTEND_URL` | `https://<app>.vercel.app` |
+| `API_BASE_URL` | `https://<api>.onrender.com` |
+| `CORS_ORIGINS` | `["https://<app>.vercel.app"]` |
+
+4. After first deploy: Render shell → `alembic upgrade head`
+5. Google Cloud OAuth **Web** client:
+   - Authorized JavaScript origins: Vercel URL
+   - Authorized redirect URI: the `GOOGLE_REDIRECT_URI` above
+
+Uploads on Render free are **ephemeral**. For a portfolio demo that is acceptable; persistent files need object storage later.
+
+---
+
 ## Production notes
 
 - Set `ENVIRONMENT=production`  
@@ -189,14 +222,7 @@ WebSockets:
 - Consider `SERVE_UPLOADS_PUBLIC=false` and auth-gated file URLs  
 - WebRTC may need a **TURN** server behind strict NAT  
 - Multi-instance deploy needs Redis/pubsub for WebSocket fan-out (not included)
-
----
-
-## Demo walkthrough
-
-See **[DEMO.md](./DEMO.md)** for a portfolio / interviewer checklist.
-
-Architecture notes: **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
+- Render free: cold start + no persistent disk
 
 ---
 

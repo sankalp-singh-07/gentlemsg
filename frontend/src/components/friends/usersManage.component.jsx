@@ -15,7 +15,7 @@ const UsersManagement = () => {
 	).length;
 
 	return (
-		<div className="bg-secondary max-md:w-11/12 max-lg:w-9/12 w-7/12 h-3/5 absolute m-auto top-0 right-0 bottom-0 left-0 shadow-lg rounded-xl overflow-hidden z-40">
+		<div className="bg-secondary fixed z-40 overflow-hidden shadow-lg inset-0 rounded-none md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(40rem,90vw)] md:h-[min(32rem,80vh)] md:rounded-xl">
 			<div className="grid grid-cols-2 border-b border-black/10">
 				<button
 					type="button"
