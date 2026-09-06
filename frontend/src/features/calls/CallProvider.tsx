@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '@/store/user/user.selector';
 import { presenceHub } from '@/shared/ws/presenceHub';
 import { useWebRTC } from './useWebRTC';
+import { useMeshWebRTC } from './useMeshWebRTC';
 import { CallOverlay } from './CallOverlay';
 import { toast } from 'react-toastify';
 
@@ -22,6 +23,13 @@ export type CallStatus =
 	| 'connecting'
 	| 'active';
 
+export interface CallParticipant {
+	id: string;
+	name: string;
+	photoURL: string;
+	joined: boolean;
+}
+
 export interface CallState {
 	status: CallStatus;
 	callId: string | null;
@@ -30,12 +38,26 @@ export interface CallState {
 	peerName: string;
 	peerPhotoURL: string;
 	isCaller: boolean;
+	isGroup: boolean;
+	groupId: string | null;
+	groupName: string;
+	groupAvatarURL: string;
+	participants: CallParticipant[];
 }
 
 interface CallContextValue {
 	state: CallState;
 	startCall: (
 		peer: { id: string; name?: string; photoURL?: string },
+		type: 'audio' | 'video'
+	) => void;
+	startGroupCall: (
+		group: {
+			id: string;
+			name?: string;
+			avatarURL?: string;
+			members: Array<{ userId: string; name?: string; photoURL?: string }>;
+		},
 		type: 'audio' | 'video'
 	) => void;
 	endCall: () => void;
@@ -51,10 +73,18 @@ const IDLE: CallState = {
 	peerName: '',
 	peerPhotoURL: '',
 	isCaller: false,
+	isGroup: false,
+	groupId: null,
+	groupName: '',
+	groupAvatarURL: '',
+	participants: [],
 };
 
 function uuid() {
-	return crypto.randomUUID?.() || `call-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	return (
+		crypto.randomUUID?.() ||
+		`call-${Date.now()}-${Math.random().toString(36).slice(2)}`
+	);
 }
 
 export function CallProvider({ children }: { children: ReactNode }) {
@@ -67,7 +97,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
 	const stateRef = useRef(state);
 	const pendingOffer = useRef<RTCSessionDescriptionInit | null>(null);
 	const startedAt = useRef<number | null>(null);
+	const joinedRef = useRef<Set<string>>(new Set());
 	const webrtc = useWebRTC();
+	const mesh = useMeshWebRTC();
 
 	useEffect(() => {
 		stateRef.current = state;
@@ -86,18 +118,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
 	const cleanup = useCallback(() => {
 		webrtc.hangup();
+		mesh.hangup();
 		setLocalStream(null);
 		setRemoteStream(null);
 		setMuted(false);
 		setCameraOff(false);
 		pendingOffer.current = null;
 		startedAt.current = null;
+		joinedRef.current = new Set();
 		setState(IDLE);
-	}, [webrtc]);
+	}, [webrtc, mesh]);
 
 	const endCall = useCallback(() => {
 		const s = stateRef.current;
-		if (s.status === 'idle' || !s.peerId || !s.callId) {
+		if (s.status === 'idle' || !s.callId) {
 			cleanup();
 			return;
 		}
@@ -105,12 +139,30 @@ export function CallProvider({ children }: { children: ReactNode }) {
 			startedAt.current != null
 				? Math.floor((Date.now() - startedAt.current) / 1000)
 				: 0;
-		signal({
-			event: 'call_end',
-			callId: s.callId,
-			toUserId: s.peerId,
-			durationSeconds: duration,
-		});
+		if (s.isGroup && s.groupId) {
+			if (s.isCaller) {
+				signal({
+					event: 'group_call_end',
+					callId: s.callId,
+					groupId: s.groupId,
+					durationSeconds: duration,
+				});
+			} else {
+				signal({
+					event: 'group_call_leave',
+					callId: s.callId,
+					groupId: s.groupId,
+					durationSeconds: duration,
+				});
+			}
+		} else if (s.peerId) {
+			signal({
+				event: 'call_end',
+				callId: s.callId,
+				toUserId: s.peerId,
+				durationSeconds: duration,
+			});
+		}
 		cleanup();
 	}, [cleanup, signal]);
 
@@ -132,6 +184,41 @@ export function CallProvider({ children }: { children: ReactNode }) {
 		setRemoteStream(stream);
 	}, []);
 
+	const meshOfferTo = useCallback(
+		async (peerId: string) => {
+			const s = stateRef.current;
+			if (!s.callId || !currentUser?.id) return;
+			try {
+				const sdp = await mesh.createOfferTo(peerId);
+				signal({
+					event: 'webrtc_offer',
+					callId: s.callId,
+					toUserId: peerId,
+					groupId: s.groupId,
+					sdp,
+				});
+			} catch (e) {
+				console.error('[GroupCall] offer failed', e);
+			}
+		},
+		[currentUser?.id, mesh, signal]
+	);
+
+	useEffect(() => {
+		mesh.setIceHandler((peerId, candidate) => {
+			const s = stateRef.current;
+			if (!s.callId) return;
+			signal({
+				event: 'webrtc_ice',
+				callId: s.callId,
+				toUserId: peerId,
+				groupId: s.groupId,
+				candidate,
+			});
+		});
+		return () => mesh.setIceHandler(null);
+	}, [mesh, signal]);
+
 	const startCall = useCallback(
 		async (
 			peer: { id: string; name?: string; photoURL?: string },
@@ -144,6 +231,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 			}
 			const callId = uuid();
 			setState({
+				...IDLE,
 				status: 'ringing_out',
 				callId,
 				callType: type,
@@ -169,10 +257,117 @@ export function CallProvider({ children }: { children: ReactNode }) {
 		[cleanup, currentUser, signal]
 	);
 
+	const startGroupCall = useCallback(
+		async (
+			group: {
+				id: string;
+				name?: string;
+				avatarURL?: string;
+				members: Array<{
+					userId: string;
+					name?: string;
+					photoURL?: string;
+				}>;
+			},
+			type: 'audio' | 'video'
+		) => {
+			if (!currentUser?.id) return;
+			if (stateRef.current.status !== 'idle') {
+				toast.info('Already in a call');
+				return;
+			}
+			const others = (group.members || []).filter(
+				(m) => m.userId && m.userId !== currentUser.id
+			);
+			if (!others.length) {
+				toast.info('No one else in this group');
+				return;
+			}
+			const callId = uuid();
+			joinedRef.current = new Set([currentUser.id]);
+			setState({
+				...IDLE,
+				status: 'ringing_out',
+				callId,
+				callType: type,
+				isCaller: true,
+				isGroup: true,
+				groupId: group.id,
+				groupName: group.name || 'Group',
+				groupAvatarURL: group.avatarURL || '',
+				peerName: group.name || 'Group',
+				peerPhotoURL: group.avatarURL || '',
+				participants: others.map((m) => ({
+					id: m.userId,
+					name: m.name || 'Member',
+					photoURL: m.photoURL || '',
+					joined: false,
+				})),
+			});
+
+			try {
+				const stream = await mesh.getMedia(type === 'video');
+				setLocalStream(stream);
+			} catch (e) {
+				console.error(e);
+				toast.error('Could not access microphone/camera');
+				cleanup();
+				return;
+			}
+
+			const sent = signal({
+				event: 'group_call_invite',
+				callId,
+				groupId: group.id,
+				callType: type,
+				fromName: currentUser.name,
+				fromPhotoURL: currentUser.photoURL,
+			});
+			if (!sent) {
+				toast.error('Not connected — try again');
+				cleanup();
+			}
+		},
+		[cleanup, currentUser, mesh, signal]
+	);
+
 	const acceptIncoming = useCallback(async () => {
 		const s = stateRef.current;
-		if (!s.callId || !s.peerId || !currentUser?.id) return;
+		if (!s.callId || !currentUser?.id) return;
 
+		if (s.isGroup && s.groupId) {
+			setState((prev) => ({ ...prev, status: 'connecting' }));
+			try {
+				const stream = await mesh.getMedia(s.callType === 'video');
+				setLocalStream(stream);
+				joinedRef.current.add(currentUser.id);
+				signal({
+					event: 'group_call_join',
+					callId: s.callId,
+					groupId: s.groupId,
+					callType: s.callType,
+					fromName: currentUser.name,
+					fromPhotoURL: currentUser.photoURL,
+				});
+				startedAt.current = Date.now();
+				setState((prev) => ({ ...prev, status: 'active' }));
+				// Offer to anyone already joined with a smaller id? They will offer to us
+				// if their id is smaller. If ours is smaller, offer to already-joined peers.
+				for (const pid of joinedRef.current) {
+					if (pid === currentUser.id) continue;
+					if (currentUser.id < pid) {
+						void meshOfferTo(pid);
+					}
+				}
+			} catch (e) {
+				console.error(e);
+				toast.error('Could not access microphone/camera');
+				endCall();
+			}
+			return;
+		}
+
+		if (!s.peerId) return;
 		setState((prev) => ({ ...prev, status: 'connecting' }));
 		signal({
 			event: 'call_accept',
@@ -181,7 +376,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
 		});
 
 		try {
-			// Wait for offer if not yet received
 			let tries = 0;
 			while (!pendingOffer.current && tries < 50) {
 				await new Promise((r) => setTimeout(r, 100));
@@ -212,11 +406,26 @@ export function CallProvider({ children }: { children: ReactNode }) {
 			toast.error('Could not access microphone/camera');
 			endCall();
 		}
-	}, [currentUser?.id, endCall, onIce, onTrack, signal, webrtc]);
+	}, [
+		currentUser,
+		endCall,
+		mesh,
+		meshOfferTo,
+		onIce,
+		onTrack,
+		signal,
+		webrtc,
+	]);
 
 	const rejectIncoming = useCallback(() => {
 		const s = stateRef.current;
-		if (s.peerId && s.callId) {
+		if (s.isGroup && s.groupId && s.callId) {
+			signal({
+				event: 'group_call_reject',
+				callId: s.callId,
+				groupId: s.groupId,
+			});
+		} else if (s.peerId && s.callId) {
 			signal({
 				event: 'call_reject',
 				callId: s.callId,
@@ -226,11 +435,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
 		cleanup();
 	}, [cleanup, signal]);
 
-	// Handle signaling events
 	useEffect(() => {
 		const unsub = presenceHub.subscribe(async (event) => {
 			const type = event.event as string;
 			const s = stateRef.current;
+			const myId = currentUser?.id;
 
 			switch (type) {
 				case 'call_invite': {
@@ -243,9 +452,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
 						return;
 					}
 					setState({
+						...IDLE,
 						status: 'ringing_in',
 						callId: event.callId as string,
-						callType: (event.callType as 'audio' | 'video') || 'audio',
+						callType:
+							(event.callType as 'audio' | 'video') || 'audio',
 						peerId: event.fromUserId as string,
 						peerName: (event.fromName as string) || 'User',
 						peerPhotoURL: (event.fromPhotoURL as string) || '',
@@ -253,8 +464,134 @@ export function CallProvider({ children }: { children: ReactNode }) {
 					});
 					break;
 				}
+				case 'group_call_invite': {
+					if (s.status !== 'idle') {
+						signal({
+							event: 'group_call_reject',
+							callId: event.callId,
+							groupId: event.groupId,
+						});
+						return;
+					}
+					const memberIds = (event.memberIds as string[]) || [];
+					setState({
+						...IDLE,
+						status: 'ringing_in',
+						callId: event.callId as string,
+						callType:
+							(event.callType as 'audio' | 'video') || 'audio',
+						isCaller: false,
+						isGroup: true,
+						groupId: event.groupId as string,
+						groupName: (event.groupName as string) || 'Group',
+						groupAvatarURL:
+							(event.groupAvatarURL as string) || '',
+						peerId: event.fromUserId as string,
+						peerName: (event.fromName as string) || 'User',
+						peerPhotoURL: (event.fromPhotoURL as string) || '',
+						participants: memberIds
+							.filter((id) => id !== myId)
+							.map((id) => ({
+								id,
+								name:
+									id === event.fromUserId
+										? (event.fromName as string) || 'Member'
+										: 'Member',
+								photoURL:
+									id === event.fromUserId
+										? (event.fromPhotoURL as string) || ''
+										: '',
+								joined: id === event.fromUserId,
+							})),
+					});
+					if (event.fromUserId) {
+						joinedRef.current = new Set([
+							event.fromUserId as string,
+						]);
+					}
+					break;
+				}
+				case 'group_call_join': {
+					if (!s.isGroup || s.callId !== event.callId) return;
+					const fromId = event.fromUserId as string;
+					if (!fromId || fromId === myId) return;
+					joinedRef.current.add(fromId);
+					setState((prev) => ({
+						...prev,
+						status:
+							prev.status === 'ringing_out'
+								? 'active'
+								: prev.status,
+						participants: prev.participants.some((p) => p.id === fromId)
+							? prev.participants.map((p) =>
+									p.id === fromId
+										? {
+												...p,
+												joined: true,
+												name:
+													(event.fromName as string) ||
+													p.name,
+												photoURL:
+													(event.fromPhotoURL as string) ||
+													p.photoURL,
+											}
+										: p
+								)
+							: [
+									...prev.participants,
+									{
+										id: fromId,
+										name:
+											(event.fromName as string) ||
+											'Member',
+										photoURL:
+											(event.fromPhotoURL as string) ||
+											'',
+										joined: true,
+									},
+								],
+					}));
+					if (!startedAt.current) startedAt.current = Date.now();
+					if (
+						myId &&
+						joinedRef.current.has(myId) &&
+						myId < fromId
+					) {
+						void meshOfferTo(fromId);
+					}
+					break;
+				}
+				case 'group_call_leave': {
+					if (!s.isGroup || s.callId !== event.callId) return;
+					const fromId = event.fromUserId as string;
+					joinedRef.current.delete(fromId);
+					mesh.removePeer(fromId);
+					setState((prev) => ({
+						...prev,
+						participants: prev.participants.map((p) =>
+							p.id === fromId ? { ...p, joined: false } : p
+						),
+					}));
+					break;
+				}
+				case 'group_call_end': {
+					if (event.callId && s.callId && event.callId !== s.callId)
+						return;
+					if (s.isGroup) {
+						toast.info('Group call ended', {
+							toastId: `gcall_end-${event.callId}`,
+						});
+						cleanup();
+					}
+					break;
+				}
+				case 'group_call_reject': {
+					if (!s.isGroup || s.callId !== event.callId) return;
+					break;
+				}
 				case 'call_accept': {
-					if (!s.isCaller || s.callId !== event.callId) return;
+					if (!s.isCaller || s.callId !== event.callId || s.isGroup)
+						return;
 					setState((prev) => ({ ...prev, status: 'connecting' }));
 					try {
 						const { sdp, stream } = await webrtc.createOffer(
@@ -282,7 +619,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
 				case 'call_busy':
 				case 'call_end':
 				case 'call_peer_unavailable': {
-					if (event.callId && s.callId && event.callId !== s.callId) return;
+					if (event.callId && s.callId && event.callId !== s.callId)
+						return;
 					const callKey = String(event.callId || s.callId || '');
 					if (type === 'call_reject') {
 						toast.info('Call declined', {
@@ -295,21 +633,59 @@ export function CallProvider({ children }: { children: ReactNode }) {
 						});
 					}
 					if (type === 'call_peer_unavailable') {
-						toast.info('User may be offline', {
-							toastId: `call_unavail-${callKey}`,
-						});
+						if (s.isGroup) {
+							toast.info('No one is online to take the call', {
+								toastId: `call_unavail-${callKey}`,
+							});
+						} else {
+							toast.info('User may be offline', {
+								toastId: `call_unavail-${callKey}`,
+							});
+						}
 					}
 					cleanup();
 					break;
 				}
 				case 'webrtc_offer': {
 					if (s.callId && event.callId !== s.callId) return;
-					pendingOffer.current = event.sdp as RTCSessionDescriptionInit;
-					// If already accepted and waiting, acceptOffer path handles it
+					if (s.isGroup) {
+						const fromId = event.fromUserId as string;
+						if (!fromId || !event.sdp) return;
+						try {
+							const answer = await mesh.acceptOfferFrom(
+								fromId,
+								event.sdp as RTCSessionDescriptionInit
+							);
+							signal({
+								event: 'webrtc_answer',
+								callId: s.callId,
+								toUserId: fromId,
+								groupId: s.groupId,
+								sdp: answer,
+							});
+						} catch (e) {
+							console.error('[GroupCall] accept offer failed', e);
+						}
+						return;
+					}
+					pendingOffer.current =
+						event.sdp as RTCSessionDescriptionInit;
 					break;
 				}
 				case 'webrtc_answer': {
 					if (s.callId !== event.callId) return;
+					if (s.isGroup) {
+						const fromId = event.fromUserId as string;
+						try {
+							await mesh.handleAnswerFrom(
+								fromId,
+								event.sdp as RTCSessionDescriptionInit
+							);
+						} catch (e) {
+							console.error(e);
+						}
+						return;
+					}
 					try {
 						await webrtc.handleAnswer(
 							event.sdp as RTCSessionDescriptionInit
@@ -321,6 +697,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
 				}
 				case 'webrtc_ice': {
 					if (s.callId !== event.callId) return;
+					if (s.isGroup) {
+						await mesh.addIceFrom(
+							event.fromUserId as string,
+							event.candidate as RTCIceCandidateInit
+						);
+						return;
+					}
 					await webrtc.addIce(
 						event.candidate as RTCIceCandidateInit
 					);
@@ -331,25 +714,41 @@ export function CallProvider({ children }: { children: ReactNode }) {
 			}
 		});
 		return unsub;
-	}, [cleanup, endCall, onIce, onTrack, signal, webrtc]);
+	}, [
+		cleanup,
+		currentUser?.id,
+		endCall,
+		mesh,
+		meshOfferTo,
+		onIce,
+		onTrack,
+		signal,
+		webrtc,
+	]);
 
-	// Auto-timeout outgoing ring after 45s
 	useEffect(() => {
 		if (state.status !== 'ringing_out') return;
 		const t = setTimeout(() => {
-			toast.info('No answer');
+			if (state.isGroup) {
+				const anyone = state.participants.some((p) => p.joined);
+				if (anyone) return;
+				toast.info('No one answered');
+			} else {
+				toast.info('No answer');
+			}
 			endCall();
 		}, 45000);
 		return () => clearTimeout(t);
-	}, [state.status, endCall]);
+	}, [state.status, state.isGroup, state.participants, endCall]);
 
 	const value = useMemo(
 		() => ({
 			state,
 			startCall,
+			startGroupCall,
 			endCall,
 		}),
-		[state, startCall, endCall]
+		[state, startCall, startGroupCall, endCall]
 	);
 
 	return (
@@ -359,6 +758,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 				state={state}
 				localStream={localStream}
 				remoteStream={remoteStream}
+				remoteStreams={mesh.remoteStreams}
 				muted={muted}
 				cameraOff={cameraOff}
 				onAccept={() => void acceptIncoming()}
@@ -368,11 +768,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
 					const next = !muted;
 					setMuted(next);
 					webrtc.setAudioEnabled(!next);
+					mesh.setAudioEnabled(!next);
 				}}
 				onToggleCamera={() => {
 					const next = !cameraOff;
 					setCameraOff(next);
 					webrtc.setVideoEnabled(!next);
+					mesh.setVideoEnabled(!next);
 				}}
 			/>
 		</CallContext.Provider>

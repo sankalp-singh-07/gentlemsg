@@ -36,6 +36,14 @@ CALL_EVENTS = {
     "webrtc_ice",
 }
 
+GROUP_CALL_EVENTS = {
+    "group_call_invite",
+    "group_call_join",
+    "group_call_leave",
+    "group_call_end",
+    "group_call_reject",
+}
+
 
 async def _handle_call_signal(user_id: str, payload: dict) -> None:
     event = payload.get("event")
@@ -53,6 +61,7 @@ async def _handle_call_signal(user_id: str, payload: dict) -> None:
         "callType": payload.get("callType") if payload.get("callType") in ("audio", "video") else "audio",
         "fromName": payload.get("fromName") or "",
         "fromPhotoURL": payload.get("fromPhotoURL") or "",
+        "groupId": payload.get("groupId") or None,
     }
 
     if event == "webrtc_offer":
@@ -123,6 +132,109 @@ async def _handle_call_signal(user_id: str, payload: dict) -> None:
         )
 
 
+async def _handle_group_call_signal(user_id: str, payload: dict) -> None:
+    """Relay group-call events to every other member; WebRTC stays pairwise."""
+    event = payload.get("event")
+    group_id = payload.get("groupId")
+    call_id = payload.get("callId")
+    if event not in GROUP_CALL_EVENTS or not group_id or not call_id:
+        return
+
+    from services.group_service import get_member_user_ids
+    from models.group import Group
+
+    async with async_session() as session:
+        member_ids = await get_member_user_ids(group_id, session)
+        if user_id not in member_ids:
+            return
+
+        group_name = ""
+        group_avatar = ""
+        gr = await session.execute(select(Group).where(Group.id == group_id))
+        group = gr.scalar_one_or_none()
+        if group:
+            group_name = group.name or ""
+            group_avatar = group.avatar_url or ""
+
+        caller_name = payload.get("fromName") or ""
+        caller_photo = payload.get("fromPhotoURL") or ""
+        if event == "group_call_invite":
+            ures = await session.execute(select(User).where(User.id == user_id))
+            caller = ures.scalar_one_or_none()
+            if caller:
+                caller_name = caller.name or caller_name
+                caller_photo = caller.photo_url or caller_photo
+            existing = await session.execute(
+                select(CallLog).where(CallLog.id == call_id)
+            )
+            if not existing.scalar_one_or_none():
+                await create_call_log(
+                    session,
+                    call_id=call_id,
+                    caller_id=user_id,
+                    callee_id=group_id,
+                    call_type=payload.get("callType")
+                    if payload.get("callType") in ("audio", "video")
+                    else "audio",
+                    group_id=group_id,
+                )
+            await session.commit()
+        elif event == "group_call_end":
+            await update_call_status(
+                session,
+                call_id,
+                "ended",
+                duration_seconds=payload.get("durationSeconds"),
+            )
+            await session.commit()
+        elif event == "group_call_reject":
+            # Only mark missed if still ringing (no one joined)
+            log_row = await session.execute(
+                select(CallLog).where(CallLog.id == call_id)
+            )
+            log = log_row.scalar_one_or_none()
+            if log and log.status == "ringing":
+                # Keep ringing — other members may still join
+                pass
+            await session.commit()
+
+    call_type = (
+        payload.get("callType")
+        if payload.get("callType") in ("audio", "video")
+        else "audio"
+    )
+    out = {
+        "event": event,
+        "callId": call_id,
+        "groupId": group_id,
+        "groupName": group_name,
+        "groupAvatarURL": group_avatar,
+        "fromUserId": user_id,
+        "fromName": caller_name,
+        "fromPhotoURL": caller_photo,
+        "callType": call_type,
+        "durationSeconds": payload.get("durationSeconds"),
+        "memberIds": member_ids,
+    }
+
+    others = [mid for mid in member_ids if mid != user_id]
+    if event == "group_call_invite":
+        online = [mid for mid in others if mid in manager.user_connections]
+        await manager.broadcast_to_users(others, out)
+        if not online:
+            await manager.send_to_user(
+                user_id,
+                {
+                    "event": "call_peer_unavailable",
+                    "callId": call_id,
+                    "groupId": group_id,
+                },
+            )
+        return
+
+    await manager.broadcast_to_users(others, out)
+
+
 @router.websocket("/ws/presence/{user_id}")
 async def presence_websocket(
     websocket: WebSocket,
@@ -178,8 +290,12 @@ async def presence_websocket(
             except json.JSONDecodeError:
                 continue
 
-            if isinstance(payload, dict) and payload.get("event") in CALL_EVENTS:
-                await _handle_call_signal(user_id, payload)
+            if isinstance(payload, dict):
+                ev = payload.get("event")
+                if ev in GROUP_CALL_EVENTS:
+                    await _handle_group_call_signal(user_id, payload)
+                elif ev in CALL_EVENTS:
+                    await _handle_call_signal(user_id, payload)
     except WebSocketDisconnect:
         pass
     finally:

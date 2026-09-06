@@ -19,11 +19,13 @@ async def create_call_log(
     caller_id: str,
     callee_id: str,
     call_type: str = "audio",
+    group_id: str | None = None,
 ) -> CallLog:
     log = CallLog(
         id=call_id,
         caller_id=caller_id,
         callee_id=callee_id,
+        group_id=group_id,
         call_type=call_type if call_type in ("audio", "video") else "audio",
         status="ringing",
         started_at=datetime.now(timezone.utc).replace(tzinfo=None),
@@ -70,10 +72,13 @@ async def update_call_status(
             )
     await db.flush()
 
-    # Persist a system call row into the 1:1 chat thread (once)
+    # Persist a system call row into the 1:1 or group thread (once)
     if status in terminal:
         try:
-            await _insert_call_chat_message(db, log)
+            if log.group_id:
+                await _insert_group_call_message(db, log)
+            else:
+                await _insert_call_chat_message(db, log)
         except Exception:
             pass
     return log
@@ -132,6 +137,61 @@ async def _insert_call_chat_message(db: AsyncSession, log: CallLog) -> None:
     )
 
 
+async def _insert_group_call_message(db: AsyncSession, log: CallLog) -> None:
+    """Create a type=call message in the group thread."""
+    from models.group import Group, GroupMessage
+    from services.group_service import _message_dict as _gmsg_dict
+    from services.user_service import get_user_by_id
+
+    if not log.group_id:
+        return
+
+    existing = await db.execute(
+        select(GroupMessage).where(
+            GroupMessage.group_id == log.group_id,
+            GroupMessage.type == "call",
+            GroupMessage.content.contains(log.id),
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+
+    payload = {
+        "callId": log.id,
+        "status": log.status,
+        "callType": log.call_type,
+        "durationSeconds": log.duration_seconds or 0,
+        "callerId": log.caller_id,
+        "groupId": log.group_id,
+    }
+    msg = GroupMessage(
+        group_id=log.group_id,
+        sender_id=log.caller_id,
+        content=json.dumps(payload),
+        type="call",
+    )
+    db.add(msg)
+
+    gr = await db.execute(select(Group).where(Group.id == log.group_id))
+    group = gr.scalar_one_or_none()
+    if group:
+        group.last_message = _call_preview_text(log)
+        group.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.flush()
+
+    sender = await get_user_by_id(log.caller_id, db)
+    body = _gmsg_dict(msg, sender)
+    body["event"] = "new_message"
+    await manager.broadcast_to_group(log.group_id, body)
+
+    from services.group_service import get_member_user_ids
+
+    member_ids = await get_member_user_ids(log.group_id, db)
+    await manager.broadcast_to_users(
+        member_ids, {"event": "groups_updated", "groupId": log.group_id}
+    )
+
+
 def _call_preview_text(log: CallLog) -> str:
     kind = "Video" if log.call_type == "video" else "Voice"
     if log.status == "missed":
@@ -163,20 +223,50 @@ async def list_call_logs(
         return []
 
     user_ids = set()
+    group_ids = set()
     for l in logs:
         user_ids.add(l.caller_id)
-        user_ids.add(l.callee_id)
+        if l.group_id:
+            group_ids.add(l.group_id)
+        else:
+            user_ids.add(l.callee_id)
     users_result = await db.execute(select(User).where(User.id.in_(user_ids)))
     users = {u.id: u for u in users_result.scalars().all()}
 
+    groups_map = {}
+    if group_ids:
+        from models.group import Group
+
+        gr = await db.execute(select(Group).where(Group.id.in_(group_ids)))
+        groups_map = {g.id: g for g in gr.scalars().all()}
+
     out = []
     for l in logs:
+        if l.group_id:
+            g = groups_map.get(l.group_id)
+            out.append({
+                "id": l.id,
+                "callerId": l.caller_id,
+                "calleeId": l.callee_id,
+                "groupId": l.group_id,
+                "callType": l.call_type,
+                "status": l.status,
+                "startedAt": l.started_at.isoformat() if l.started_at else None,
+                "endedAt": l.ended_at.isoformat() if l.ended_at else None,
+                "durationSeconds": l.duration_seconds or 0,
+                "direction": "outgoing" if l.caller_id == user_id else "incoming",
+                "peerId": l.group_id,
+                "peerName": g.name if g else "Group call",
+                "peerPhotoURL": (g.avatar_url if g else "") or "",
+            })
+            continue
         peer_id = l.callee_id if l.caller_id == user_id else l.caller_id
         peer = users.get(peer_id)
         out.append({
             "id": l.id,
             "callerId": l.caller_id,
             "calleeId": l.callee_id,
+            "groupId": None,
             "callType": l.call_type,
             "status": l.status,
             "startedAt": l.started_at.isoformat() if l.started_at else None,

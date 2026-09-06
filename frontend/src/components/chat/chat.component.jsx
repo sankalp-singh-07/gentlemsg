@@ -874,6 +874,7 @@ const Chat = ({ inMobile }) => {
 				currentUser={currentUser}
 				receiverData={receiverData}
 				isUserBlocked={isUserBlocked}
+				onDone={() => setFiles([])}
 			/>
 		</div>
 	);

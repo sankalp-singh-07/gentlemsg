@@ -163,3 +163,28 @@ export const uploadGroupAvatar = async (groupId: string, file: File) => {
 	});
 	return res.data;
 };
+
+export const uploadGroupMedia = async (
+	groupId: string,
+	file: File
+): Promise<{
+	url: string;
+	type: string;
+	message_id: string;
+	sent_at?: string | null;
+	reply_to_id?: string | null;
+}> => {
+	const form = new FormData();
+	form.append('file', file);
+	const res = await api.post(`/groups/${groupId}/media`, form, {
+		headers: { 'Content-Type': 'multipart/form-data' },
+	});
+	return res.data;
+};
+
+export const getGroupMedia = async (
+	groupId: string
+): Promise<Array<{ url: string; contentType: string; filename: string }>> => {
+	const res = await api.get(`/groups/${groupId}/media`);
+	return res.data;
+};

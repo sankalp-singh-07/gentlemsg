@@ -2,7 +2,14 @@ import React, { useContext, useEffect, useState } from 'react';
 import { MessageContext } from '../../context/message.context';
 import * as chatService from '../../services/chatService';
 
-const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
+const SendMedia = ({
+	files,
+	currentUser,
+	receiverData,
+	isUserBlocked,
+	uploadFn,
+	onDone,
+}) => {
 	const [filesArr, setFilesArr] = useState([]);
 	const [sending, setSending] = useState('Send');
 
@@ -29,8 +36,11 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 		setSending('Sending...');
 
 		try {
+			const upload =
+				uploadFn ||
+				((file) => chatService.uploadMedia(chatId, file));
 			for (const file of filesArr) {
-				const result = await chatService.uploadMedia(chatId, file);
+				const result = await upload(file);
 				if (result?.message_id && setMessages) {
 					setMessages((prev) => {
 						const existingMessages = prev?.messages || [];
@@ -43,6 +53,8 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 								{
 									id: result.message_id,
 									senderId: currentUser?.id,
+									senderName: currentUser?.name,
+									senderPhotoURL: currentUser?.photoURL,
 									message: result.url,
 									type: result.type,
 									sentAt: result.sent_at || new Date().toISOString(),
@@ -58,6 +70,7 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 
 		setFilesArr([]);
 		setSending('Send');
+		onDone?.();
 	};
 
 	return (
@@ -106,7 +119,10 @@ const SendMedia = ({ files, currentUser, receiverData, isUserBlocked }) => {
 							{sending}
 						</button>
 						<button
-							onClick={() => setFilesArr([])}
+							onClick={() => {
+								setFilesArr([]);
+								onDone?.();
+							}}
 							className="bg-red-500 text-white font-bold px-4 py-2   flex-1 rounded-none shadow-none border-none"
 						>
 							Cancel

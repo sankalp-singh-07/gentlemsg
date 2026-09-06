@@ -506,3 +506,87 @@ async def get_member_user_ids(group_id: str, db: AsyncSession) -> list[str]:
         select(GroupMember.user_id).where(GroupMember.group_id == group_id)
     )
     return [row[0] for row in result.all()]
+
+
+async def upload_media(
+    group_id: str,
+    sender_id: str,
+    file,
+    db: AsyncSession,
+    reply_to_id: Optional[str] = None,
+) -> dict:
+    """Upload a media file and create a group message for it."""
+    from utils import validate_upload, sanitize_filename
+
+    await require_member(group_id, sender_id, db)
+    content = await validate_upload(file)
+
+    upload_dir = os.path.join(settings.UPLOAD_DIR, "groups", group_id)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    safe_name = sanitize_filename(file.filename) if file.filename else "file"
+    ext = os.path.splitext(safe_name)[1] or ""
+    filename = (
+        f"{int(datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:8]}{ext}"
+    )
+    filepath = os.path.join(upload_dir, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    file_url = f"/uploads/groups/{group_id}/{filename}"
+
+    content_type = file.content_type or ""
+    if "image" in content_type:
+        msg_type = "image"
+    elif "video" in content_type:
+        msg_type = "video"
+    elif "pdf" in content_type:
+        msg_type = "document"
+    else:
+        msg_type = "document"
+
+    message = await send_message(
+        group_id=group_id,
+        sender_id=sender_id,
+        content=file_url,
+        msg_type=msg_type,
+        db=db,
+        reply_to_id=reply_to_id,
+    )
+
+    return {
+        "url": file_url,
+        "type": msg_type,
+        "message_id": message.id,
+        "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+        "reply_to_id": message.reply_to_id,
+    }
+
+
+async def get_group_media(group_id: str) -> list[dict]:
+    """List media files in a group's upload directory."""
+    media_dir = os.path.join(settings.UPLOAD_DIR, "groups", group_id)
+    media_list = []
+    if not os.path.exists(media_dir):
+        return media_list
+
+    for filename in os.listdir(media_dir):
+        filepath = os.path.join(media_dir, filename)
+        if not os.path.isfile(filepath):
+            continue
+        ext = os.path.splitext(filename)[1].lower()
+        if ext in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+            content_type = f"image/{ext[1:]}"
+        elif ext in [".mp4", ".webm", ".mov"]:
+            content_type = f"video/{ext[1:]}"
+        elif ext == ".pdf":
+            content_type = "application/pdf"
+        else:
+            continue
+        media_list.append({
+            "url": f"/uploads/groups/{group_id}/{filename}",
+            "contentType": content_type,
+            "filename": filename,
+        })
+    return media_list

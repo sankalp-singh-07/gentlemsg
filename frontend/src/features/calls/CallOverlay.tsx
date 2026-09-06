@@ -4,6 +4,7 @@ import {
 	MicOff,
 	Phone,
 	PhoneOff,
+	Users,
 	Video,
 	VideoOff,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ interface Props {
 	state: CallState;
 	localStream: MediaStream | null;
 	remoteStream: MediaStream | null;
+	remoteStreams?: Record<string, MediaStream>;
 	muted: boolean;
 	cameraOff: boolean;
 	onAccept: () => void;
@@ -20,6 +22,38 @@ interface Props {
 	onEnd: () => void;
 	onToggleMute: () => void;
 	onToggleCamera: () => void;
+}
+
+function RemoteAudio({ stream }: { stream: MediaStream }) {
+	const ref = useRef<HTMLAudioElement>(null);
+	useEffect(() => {
+		if (ref.current) ref.current.srcObject = stream;
+	}, [stream]);
+	return <audio ref={ref} autoPlay className="hidden" />;
+}
+
+function PeerVideo({
+	stream,
+	muted: videoMuted,
+	className,
+}: {
+	stream: MediaStream | null;
+	muted?: boolean;
+	className?: string;
+}) {
+	const ref = useRef<HTMLVideoElement>(null);
+	useEffect(() => {
+		if (ref.current) ref.current.srcObject = stream;
+	}, [stream]);
+	return (
+		<video
+			ref={ref}
+			autoPlay
+			playsInline
+			muted={videoMuted}
+			className={className}
+		/>
+	);
 }
 
 function formatDuration(totalSeconds: number) {
@@ -32,6 +66,7 @@ export function CallOverlay({
 	state,
 	localStream,
 	remoteStream,
+	remoteStreams = {},
 	muted,
 	cameraOff,
 	onAccept,
@@ -44,6 +79,7 @@ export function CallOverlay({
 	const localVideoRef = useRef<HTMLVideoElement>(null);
 	const remoteAudioRef = useRef<HTMLAudioElement>(null);
 	const [elapsed, setElapsed] = useState(0);
+	const isGroup = Boolean(state.isGroup);
 
 	useEffect(() => {
 		if (remoteVideoRef.current && remoteStream) {
@@ -75,22 +111,33 @@ export function CallOverlay({
 	if (state.status === 'idle') return null;
 
 	const isVideo = state.callType === 'video';
-	const peerName = state.peerName || 'User';
+	const peerName = isGroup
+		? state.groupName || 'Group'
+		: state.peerName || 'User';
 	const active =
 		state.status === 'active' || state.status === 'connecting';
 	const ringing =
 		state.status === 'ringing_in' || state.status === 'ringing_out';
+	const joinedCount =
+		1 + (state.participants || []).filter((p) => p.joined).length;
+	const remoteEntries = Object.entries(remoteStreams);
 
 	const statusLabel =
 		state.status === 'ringing_out'
-			? 'Calling…'
+			? isGroup
+				? 'Calling group…'
+				: 'Calling…'
 			: state.status === 'ringing_in'
-				? `Incoming ${isVideo ? 'video' : 'voice'} call`
+				? `Incoming ${isVideo ? 'video' : 'voice'} ${isGroup ? 'group ' : ''}call`
 				: state.status === 'connecting'
 					? 'Connecting…'
 					: isVideo
-						? 'Video call'
-						: 'Voice call';
+						? isGroup
+							? 'Group video'
+							: 'Video call'
+						: isGroup
+							? 'Group voice'
+							: 'Voice call';
 
 	return (
 		<div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#0b1220]">
@@ -100,7 +147,52 @@ export function CallOverlay({
 				<div className="h-1 w-full bg-gradient-to-r from-sky-500 via-[#0077b6] to-indigo-500" />
 
 				<div className="relative flex flex-col items-center px-6 pt-10 pb-4 min-h-[280px] bg-[#111827]">
-					{isVideo && active ? (
+					{isGroup && isVideo && active ? (
+						<div className="relative w-full rounded-2xl overflow-hidden bg-black shadow-inner p-1.5">
+							<div
+								className={`grid gap-1.5 ${
+									remoteEntries.length > 1
+										? 'grid-cols-2'
+										: 'grid-cols-1'
+								}`}
+							>
+								{remoteEntries.map(([id, stream]) => {
+									const p = state.participants.find(
+										(x) => x.id === id
+									);
+									return (
+										<div
+											key={id}
+											className="relative aspect-video rounded-xl overflow-hidden bg-slate-900"
+										>
+											<PeerVideo
+												stream={stream}
+												className="w-full h-full object-cover"
+											/>
+											<span className="absolute bottom-1.5 left-1.5 text-[10px] bg-black/70 px-1.5 py-0.5 rounded text-white">
+												{p?.name || 'Member'}
+											</span>
+										</div>
+									);
+								})}
+								<div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900">
+									<PeerVideo
+										stream={localStream}
+										muted
+										className="w-full h-full object-cover"
+									/>
+									<span className="absolute bottom-1.5 left-1.5 text-[10px] bg-black/70 px-1.5 py-0.5 rounded text-white">
+										You
+									</span>
+								</div>
+							</div>
+							{state.status === 'active' && (
+								<span className="absolute top-3 left-3 text-xs font-medium bg-[#0b1220] px-2.5 py-1 rounded-full tabular-nums text-white">
+									{formatDuration(elapsed)}
+								</span>
+							)}
+						</div>
+					) : isVideo && active ? (
 						<div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-inner">
 							<video
 								ref={remoteVideoRef}
@@ -131,16 +223,25 @@ export function CallOverlay({
 										<span className="absolute w-28 h-28 rounded-full bg-sky-500/20 animate-pulse" />
 									</>
 								)}
-								{state.peerPhotoURL ? (
+								{state.peerPhotoURL || state.groupAvatarURL ? (
 									<img
-										src={state.peerPhotoURL}
+										src={
+											isGroup
+												? state.groupAvatarURL ||
+													state.peerPhotoURL
+												: state.peerPhotoURL
+										}
 										alt=""
 										className="relative w-28 h-28 rounded-full object-cover ring-4 ring-sky-500/50 shadow-xl bg-[#1e293b]"
 										referrerPolicy="no-referrer"
 									/>
 								) : (
 									<div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-4xl font-bold ring-4 ring-sky-500/50 shadow-xl">
-										{peerName.charAt(0).toUpperCase()}
+										{isGroup ? (
+											<Users size={40} />
+										) : (
+											peerName.charAt(0).toUpperCase()
+										)}
 									</div>
 								)}
 							</div>
@@ -151,10 +252,23 @@ export function CallOverlay({
 					{isVideo && (
 						<audio ref={remoteAudioRef} autoPlay className="hidden" />
 					)}
+					{isGroup &&
+						Object.entries(remoteStreams).map(([id, stream]) => (
+							<RemoteAudio key={id} stream={stream} />
+						))}
 
 					<p className="mt-2 text-xl font-semibold tracking-tight text-center text-white">
-						{peerName}
+						{isGroup && state.status === 'ringing_in'
+							? state.peerName
+							: peerName}
 					</p>
+					{isGroup && (
+						<p className="text-xs text-slate-400 mt-0.5">
+							{state.status === 'ringing_in'
+								? `${state.groupName || 'Group'} · ${joinedCount} in call`
+								: `${joinedCount} in call`}
+						</p>
+					)}
 					<p className="mt-1 text-sm text-slate-300 flex items-center gap-2">
 						{isVideo ? (
 							<Video size={14} className="text-slate-400" />

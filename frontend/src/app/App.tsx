@@ -62,7 +62,8 @@ function App() {
 					// Let CallProvider handle call_* / webrtc_* via its own subscription
 					if (
 						ev.startsWith('call_') ||
-						ev.startsWith('webrtc_')
+						ev.startsWith('webrtc_') ||
+						ev.startsWith('group_call_')
 					) {
 						return;
 					}

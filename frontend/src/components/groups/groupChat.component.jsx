@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { MessageContext } from '@/context/message.context';
+import { DarkModeContext } from '@/context/dark.context';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '@/store/user/user.selector';
 import {
@@ -15,14 +16,16 @@ import {
 	deleteGroup,
 	updateGroup,
 	sendGroupTyping,
+	uploadGroupMedia,
 } from '@/shared/api/groups';
 import { connectGroup } from '@/shared/ws/groupClient';
-import { Avatar, Button, EmptyState } from '@/shared/ui';
+import { Avatar, Button, EmptyState, MediaLightbox } from '@/shared/ui';
 import {
 	formatMessageTime,
 	formatDayLabel,
 	isSameDay,
 } from '@/shared/lib/messageDisplay';
+import { resolveMediaUrl } from '@/shared/lib/mediaUrl';
 import { friendSelector } from '@/store/friends/friends.selector';
 import {
 	Users,
@@ -33,17 +36,61 @@ import {
 	UserPlus,
 	X,
 	Pencil,
+	Smile,
+	Paperclip,
+	Phone,
+	Video,
+	FileText,
+	PhoneMissed,
+	PhoneOff,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import EmojiPicker from 'emoji-picker-react';
+import { useClickOutside } from '@/shared/hooks/useClickOutside';
+import { useCall } from '@/features/calls';
+import SendMedia from '../messages/sendMedia';
 import '../chat/chat.css';
+
+function parseCallPayload(raw) {
+	try {
+		return typeof raw === 'string' ? JSON.parse(raw) : raw;
+	} catch {
+		return null;
+	}
+}
+
+function formatCallDuration(secs) {
+	const n = Math.max(0, Number(secs) || 0);
+	const m = Math.floor(n / 60);
+	const s = n % 60;
+	return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function callLogLabel(payload) {
+	if (!payload) return 'Group call';
+	const isVideo = payload.callType === 'video';
+	const kind = isVideo ? 'Video' : 'Voice';
+	const status = payload.status || 'ended';
+	if (status === 'missed') return `Missed ${kind.toLowerCase()} call`;
+	if (status === 'rejected') return `${kind} call declined`;
+	if (status === 'ended') {
+		const d = payload.durationSeconds || 0;
+		return d > 0
+			? `Group ${kind.toLowerCase()} call · ${formatCallDuration(d)}`
+			: `Group ${kind.toLowerCase()} call ended`;
+	}
+	return `Group ${kind.toLowerCase()} call`;
+}
 
 const GroupChat = ({ inMobile }) => {
 	const { groupId, setGroupId, messages, setMessages } =
 		useContext(MessageContext);
+	const { isDark } = useContext(DarkModeContext);
 	const { currentUser } = useSelector(selectCurrentUser);
 	const { friends } = useSelector(friendSelector);
 	const navigate = useNavigate();
+	const { startGroupCall } = useCall();
 
 	const [group, setGroup] = useState(null);
 	const [members, setMembers] = useState([]);
@@ -52,12 +99,53 @@ const GroupChat = ({ inMobile }) => {
 	const [typingUserId, setTypingUserId] = useState(null);
 	const [editing, setEditing] = useState(null);
 	const [addOpen, setAddOpen] = useState(false);
+	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+	const [files, setFiles] = useState([]);
+	const [dragOver, setDragOver] = useState(false);
+	const [lightbox, setLightbox] = useState(null);
 	const socketRef = useRef(null);
 	const bottomRef = useRef(null);
 	const typingTimer = useRef(null);
 	const typingExpire = useRef(null);
+	const emojiWrapRef = useRef(null);
+	const fileInputRef = useRef(null);
+
+	useClickOutside(emojiWrapRef, () => setEmojiPickerOpen(false), emojiPickerOpen);
 
 	const messagesArr = messages?.messages || [];
+
+	const upsertMessage = useCallback(
+		(msg) => {
+			setMessages((prev) => {
+				const existing = prev?.messages || [];
+				if (msg.id && existing.some((m) => m.id === msg.id)) {
+					return {
+						messages: existing.map((m) =>
+							m.id === msg.id ? { ...m, ...msg, status: 'sent' } : m
+						),
+					};
+				}
+				const withoutTemp = existing.filter((m) => {
+					if (msg.tempId && m.tempId === msg.tempId) return false;
+					if (
+						m.tempId &&
+						m.senderId === msg.senderId &&
+						m.message === msg.message
+					) {
+						return false;
+					}
+					return true;
+				});
+				if (msg.id && withoutTemp.some((m) => m.id === msg.id)) {
+					return { messages: withoutTemp };
+				}
+				return {
+					messages: [...withoutTemp, { ...msg, status: 'sent' }],
+				};
+			});
+		},
+		[setMessages]
+	);
 
 	const loadMeta = useCallback(async () => {
 		if (!groupId) return;
@@ -87,24 +175,16 @@ const GroupChat = ({ inMobile }) => {
 
 				const sock = connectGroup(groupId, (event) => {
 					if (event.event === 'new_message') {
-						setMessages((prev) => {
-							const existing = prev?.messages || [];
-							if (existing.some((m) => m.id === event.id)) return prev;
-							return {
-								messages: [
-									...existing,
-									{
-										id: event.id,
-										senderId: event.senderId,
-										senderName: event.senderName,
-										senderPhotoURL: event.senderPhotoURL,
-										message: event.message,
-										type: event.type,
-										sentAt: event.sentAt,
-										editedAt: event.editedAt,
-									},
-								],
-							};
+						upsertMessage({
+							id: event.id,
+							senderId: event.senderId,
+							senderName: event.senderName,
+							senderPhotoURL: event.senderPhotoURL,
+							message: event.message,
+							type: event.type,
+							sentAt: event.sentAt,
+							editedAt: event.editedAt,
+							replyToId: event.replyToId,
 						});
 					} else if (event.event === 'message_edited') {
 						setMessages((prev) => ({
@@ -127,7 +207,8 @@ const GroupChat = ({ inMobile }) => {
 					} else if (event.event === 'typing') {
 						if (event.userId !== currentUser?.id) {
 							setTypingUserId(event.userId);
-							if (typingExpire.current) clearTimeout(typingExpire.current);
+							if (typingExpire.current)
+								clearTimeout(typingExpire.current);
 							typingExpire.current = setTimeout(
 								() => setTypingUserId(null),
 								2000
@@ -153,7 +234,7 @@ const GroupChat = ({ inMobile }) => {
 			cancelled = true;
 			socketRef.current?.close?.();
 		};
-	}, [groupId, setMessages, currentUser?.id, loadMeta]);
+	}, [groupId, setMessages, currentUser?.id, loadMeta, upsertMessage]);
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -203,6 +284,7 @@ const GroupChat = ({ inMobile }) => {
 					tempId,
 					senderId: currentUser.id,
 					senderName: currentUser.name,
+					senderPhotoURL: currentUser.photoURL,
 					message: plain,
 					type: 'text',
 					sentAt: new Date().toISOString(),
@@ -214,21 +296,16 @@ const GroupChat = ({ inMobile }) => {
 
 		try {
 			const sent = await sendGroupMessage(groupId, plain, 'text');
-			setMessages((prev) => ({
-				messages: (prev?.messages || [])
-					.filter((m) => m.tempId !== tempId)
-					.concat([
-						{
-							id: sent.id,
-							senderId: sent.senderId,
-							senderName: sent.senderName || currentUser.name,
-							senderPhotoURL: sent.senderPhotoURL,
-							message: sent.message || plain,
-							type: 'text',
-							sentAt: sent.sentAt,
-						},
-					]),
-			}));
+			upsertMessage({
+				id: sent.id,
+				tempId,
+				senderId: sent.senderId || currentUser.id,
+				senderName: sent.senderName || currentUser.name,
+				senderPhotoURL: sent.senderPhotoURL || currentUser.photoURL,
+				message: sent.message || plain,
+				type: sent.type || 'text',
+				sentAt: sent.sentAt,
+			});
 		} catch {
 			setMessages((prev) => ({
 				messages: (prev?.messages || []).map((m) =>
@@ -310,12 +387,108 @@ const GroupChat = ({ inMobile }) => {
 		}
 	};
 
+	const handleEmoji = (emojiData) => {
+		setText((prev) => prev + (emojiData.emoji || ''));
+	};
+
+	const startCall = (type) => {
+		if (!group) return;
+		startGroupCall(
+			{
+				id: group.id,
+				name: group.name,
+				avatarURL: group.avatarURL,
+				members,
+			},
+			type
+		);
+	};
+
+	const renderMedia = (msg, isOwn) => {
+		const src = resolveMediaUrl(msg.message);
+		if (msg.type === 'image') {
+			return (
+				<img
+					src={src}
+					alt="media"
+					className="max-w-[220px] rounded-xl cursor-pointer"
+					onClick={() => setLightbox({ src, type: 'image' })}
+				/>
+			);
+		}
+		if (msg.type === 'document') {
+			return (
+				<a
+					href={src}
+					target="_blank"
+					rel="noopener noreferrer"
+					className={`inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-md border transition-opacity hover:opacity-90 ${
+						isOwn
+							? 'bg-primary text-white border-primary/80'
+							: 'bg-secondary text-black border-black/15'
+					}`}
+				>
+					<span
+						className={`flex items-center justify-center w-9 h-9 rounded-lg shrink-0 ${
+							isOwn
+								? 'bg-white/20 text-white'
+								: 'bg-primary/15 text-primary'
+						}`}
+					>
+						<FileText size={18} strokeWidth={2} />
+					</span>
+					<span className="text-left leading-tight">
+						<span className="block">Document</span>
+						<span
+							className={`block text-[11px] font-normal ${
+								isOwn ? 'text-white/85' : 'text-black/60'
+							}`}
+						>
+							Tap to open PDF
+						</span>
+					</span>
+				</a>
+			);
+		}
+		return (
+			<video
+				controls
+				className="max-w-[260px] rounded-xl"
+				onClick={(e) => {
+					e.preventDefault();
+					setLightbox({ src, type: 'video' });
+				}}
+			>
+				<source src={src} />
+			</video>
+		);
+	};
+
 	if (!groupId) return null;
 
 	return (
 		<div
 			className={`chat ${inMobile === 'hidden' && 'max-[650px]:hidden'} relative`}
+			onDragOver={(e) => {
+				e.preventDefault();
+				setDragOver(true);
+			}}
+			onDragLeave={() => setDragOver(false)}
+			onDrop={(e) => {
+				e.preventDefault();
+				setDragOver(false);
+				const dropped = Array.from(e.dataTransfer.files || []);
+				if (dropped.length) setFiles(dropped);
+			}}
 		>
+			{dragOver && (
+				<div className="drop-overlay">
+					<p className="text-primary font-semibold text-lg">
+						Drop files to send
+					</p>
+				</div>
+			)}
+
 			{/* Header */}
 			<div className="flex items-center justify-between h-16 w-full border-b border-[#B8D9FF]/4 px-3 shrink-0">
 				<div className="flex items-center gap-2 min-w-0">
@@ -347,14 +520,34 @@ const GroupChat = ({ inMobile }) => {
 						</p>
 					</div>
 				</div>
-				<button
-					type="button"
-					className="p-2 rounded-lg hover:bg-black/5"
-					onClick={() => setInfoOpen((v) => !v)}
-					aria-label="Group info"
-				>
-					<Info size={18} />
-				</button>
+				<div className="flex items-center gap-1 shrink-0">
+					<button
+						type="button"
+						className="p-2 rounded-lg hover:bg-black/5 text-primary"
+						onClick={() => startCall('audio')}
+						aria-label="Group voice call"
+						title="Group voice call"
+					>
+						<Phone size={18} />
+					</button>
+					<button
+						type="button"
+						className="p-2 rounded-lg hover:bg-black/5 text-primary"
+						onClick={() => startCall('video')}
+						aria-label="Group video call"
+						title="Group video call"
+					>
+						<Video size={18} />
+					</button>
+					<button
+						type="button"
+						className="p-2 rounded-lg hover:bg-black/5"
+						onClick={() => setInfoOpen((v) => !v)}
+						aria-label="Group info"
+					>
+						<Info size={18} />
+					</button>
+				</div>
 			</div>
 
 			{/* Messages */}
@@ -372,11 +565,53 @@ const GroupChat = ({ inMobile }) => {
 					const showDay = !prev || !isSameDay(prev.sentAt, msg.sentAt);
 					const showName =
 						!isOwn && (!prev || prev.senderId !== msg.senderId);
+
+					if (msg.type === 'call') {
+						const payload = parseCallPayload(msg.message);
+						const label = callLogLabel(payload);
+						const isMissed = payload?.status === 'missed';
+						const isRejected = payload?.status === 'rejected';
+						const isVideo = payload?.callType === 'video';
+						const Icon = isMissed
+							? PhoneMissed
+							: isRejected
+								? PhoneOff
+								: isVideo
+									? Video
+									: Phone;
+						return (
+							<div className="w-full" key={msg.id || msg.tempId}>
+								{showDay && (
+									<div className="flex justify-center my-2">
+										<span className="text-xs bg-black/10 text-black/70 px-3 py-1 rounded-full">
+											{formatDayLabel(msg.sentAt)}
+										</span>
+									</div>
+								)}
+								<div className="flex justify-center my-2 px-2">
+									<div
+										className={`inline-flex items-center gap-2 text-xs sm:text-sm px-3.5 py-1.5 rounded-full border shadow-sm font-medium ${
+											isMissed || isRejected
+												? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+												: 'bg-quatery text-black border-black/10'
+										}`}
+									>
+										<Icon size={14} className="shrink-0" />
+										<span>{label}</span>
+										<span className="opacity-70 font-normal">
+											{formatMessageTime(msg.sentAt)}
+										</span>
+									</div>
+								</div>
+							</div>
+						);
+					}
+
 					return (
 						<div className="w-full" key={msg.id || msg.tempId}>
 							{showDay && (
 								<div className="flex justify-center my-2">
-									<span className="text-xs bg-black/10 px-3 py-1 rounded-full">
+									<span className="text-xs bg-black/10 text-black/70 px-3 py-1 rounded-full">
 										{formatDayLabel(msg.sentAt)}
 									</span>
 								</div>
@@ -396,17 +631,29 @@ const GroupChat = ({ inMobile }) => {
 											{msg.senderName || 'Member'}
 										</span>
 									)}
-									<span className="textContent">
-										{msg.message}
-										{msg.editedAt && (
-											<span className="text-[10px] opacity-60 ml-1">
-												(edited)
-											</span>
-										)}
-									</span>
+									{msg.type && msg.type !== 'text' ? (
+										<div className="media-bubble">
+											{renderMedia(msg, isOwn)}
+										</div>
+									) : (
+										<span
+											className={`textContent ${
+												msg.status === 'failed'
+													? 'opacity-60 ring-1 ring-red-400'
+													: ''
+											}`}
+										>
+											{msg.message}
+											{msg.editedAt && (
+												<span className="text-[10px] opacity-60 ml-1">
+													(edited)
+												</span>
+											)}
+										</span>
+									)}
 									<span className="text-[11px] text-black/40 px-1 flex gap-2 items-center">
 										{formatMessageTime(msg.sentAt)}
-										{isOwn && (
+										{isOwn && msg.type === 'text' && !msg.tempId && (
 											<>
 												<button
 													type="button"
@@ -427,6 +674,15 @@ const GroupChat = ({ inMobile }) => {
 												</button>
 											</>
 										)}
+										{isOwn && msg.type !== 'text' && !msg.tempId && (
+											<button
+												type="button"
+												className="hover:text-red-500"
+												onClick={() => handleDeleteMsg(msg)}
+											>
+												delete
+											</button>
+										)}
 									</span>
 								</div>
 							</div>
@@ -439,55 +695,125 @@ const GroupChat = ({ inMobile }) => {
 				<div ref={bottomRef} />
 			</div>
 
-			{/* Composer */}
+			{/* Composer — column so the edit bar sits above the input */}
 			<div className="bottom">
-				{editing && (
-					<div className="reply-bar w-full mb-1">
-						<span className="text-xs">Editing message</span>
+				<div className="inputContainer flex-col! w-full">
+					{editing && (
+						<div className="reply-bar w-full">
+							<div className="min-w-0 flex-1">
+								<p className="text-xs font-semibold text-primary">
+									Editing
+								</p>
+								<p className="truncate text-black/70">
+									{editing.message}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => {
+									setEditing(null);
+									setText('');
+								}}
+								aria-label="Cancel edit"
+							>
+								<X size={16} />
+							</button>
+						</div>
+					)}
+					<div className="flex items-end gap-2 w-full">
+						<div className="inputEl" ref={emojiWrapRef}>
+							<div className="relative">
+								<button
+									type="button"
+									className="p-2 text-black/60 hover:text-black"
+									onClick={() =>
+										setEmojiPickerOpen((v) => !v)
+									}
+									aria-label="Emoji"
+								>
+									<Smile size={22} />
+								</button>
+								{emojiPickerOpen && (
+									<div className="absolute bottom-12 left-0 z-30 shadow-xl">
+										<EmojiPicker
+											onEmojiClick={handleEmoji}
+											width={300}
+											height={380}
+											theme={isDark ? 'dark' : 'light'}
+										/>
+									</div>
+								)}
+							</div>
+							<input
+								className="w-full h-full outline-none px-2 py-3 bg-transparent text-black"
+								placeholder={
+									editing
+										? 'Edit message…'
+										: 'Message the group…'
+								}
+								value={text}
+								onChange={(e) => {
+									setText(e.target.value);
+									notifyTyping();
+								}}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' && !e.shiftKey) {
+										e.preventDefault();
+										handleSend();
+									}
+								}}
+							/>
+							<button
+								type="button"
+								className="p-2 text-black/60 hover:text-black"
+								onClick={() => fileInputRef.current?.click()}
+								aria-label="Attach"
+							>
+								<Paperclip size={20} />
+							</button>
+							<input
+								type="file"
+								multiple
+								accept="image/*,video/*,.pdf,application/pdf"
+								className="hidden"
+								onChange={(e) =>
+									setFiles(Array.from(e.target.files || []))
+								}
+								ref={fileInputRef}
+							/>
+						</div>
 						<button
 							type="button"
-							onClick={() => {
-								setEditing(null);
-								setText('');
-							}}
+							className="bg-primary text-white rounded-xl p-3 disabled:opacity-50 shrink-0"
+							disabled={!text.trim()}
+							onClick={handleSend}
+							aria-label="Send"
 						>
-							<X size={14} />
+							<Send size={18} />
 						</button>
 					</div>
-				)}
-				<div className="inputContainer w-full">
-					<div className="inputEl">
-						<input
-							className="w-full outline-none px-3 py-3 bg-transparent text-black"
-							placeholder="Message the group…"
-							value={text}
-							onChange={(e) => {
-								setText(e.target.value);
-								notifyTyping();
-							}}
-							onKeyDown={(e) => {
-								if (e.key === 'Enter' && !e.shiftKey) {
-									e.preventDefault();
-									handleSend();
-								}
-							}}
-						/>
-					</div>
-					<button
-						type="button"
-						className="bg-primary text-white rounded-xl p-3 disabled:opacity-50"
-						disabled={!text.trim()}
-						onClick={handleSend}
-					>
-						<Send size={18} />
-					</button>
 				</div>
 			</div>
 
+			<SendMedia
+				files={files}
+				currentUser={currentUser}
+				uploadFn={(file) => uploadGroupMedia(groupId, file)}
+				onDone={() => setFiles([])}
+			/>
+
+			{lightbox && (
+				<MediaLightbox
+					src={lightbox.src}
+					type={lightbox.type}
+					onClose={() => setLightbox(null)}
+				/>
+			)}
+
 			{/* Info panel */}
 			{infoOpen && (
-				<div className="absolute inset-y-0 right-0 w-full sm:w-80 bg-secondary shadow-xl z-30 flex flex-col border-l border-black/10">
-					<div className="flex items-center justify-between p-3 border-b">
+				<div className="absolute inset-y-0 right-0 w-full sm:w-80 bg-secondary shadow-xl z-30 flex flex-col border-l border-black/10 text-black">
+					<div className="flex items-center justify-between p-3 border-b border-black/10">
 						<h3 className="font-semibold">Group info</h3>
 						<button type="button" onClick={() => setInfoOpen(false)}>
 							<X size={18} />
@@ -541,7 +867,7 @@ const GroupChat = ({ inMobile }) => {
 							</div>
 						))}
 					</div>
-					<div className="p-3 border-t space-y-2">
+					<div className="p-3 border-t border-black/10 space-y-2">
 						{myRole !== 'owner' && (
 							<Button
 								variant="ghost"
@@ -564,7 +890,7 @@ const GroupChat = ({ inMobile }) => {
 
 					{addOpen && (
 						<div className="absolute inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4">
-							<div className="bg-secondary rounded-xl p-4 w-full max-w-sm max-h-80 overflow-y-auto">
+							<div className="bg-secondary rounded-xl p-4 w-full max-w-sm max-h-80 overflow-y-auto text-black">
 								<p className="font-semibold mb-2">Add friends</p>
 								{addableFriends.length === 0 && (
 									<p className="text-sm text-black/50">

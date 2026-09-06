@@ -2,7 +2,7 @@ import { useEffect, useState, useContext } from 'react';
 import { listGroups } from '@/shared/api/groups';
 import { MessageContext } from '@/context/message.context';
 import { Avatar, Skeleton } from '@/shared/ui';
-import { formatDayLabel } from '@/shared/lib/messageDisplay';
+import { formatDayLabel, previewLastMessage } from '@/shared/lib/messageDisplay';
 import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -45,7 +45,7 @@ const GroupList = ({ refreshKey = 0 }) => {
 
 	if (!groups.length) {
 		return (
-			<p className="text-xs text-black/40 px-3 py-2">No groups yet</p>
+			<p className="text-xs text-black/50 px-3 py-2">No groups yet</p>
 		);
 	}
 
@@ -57,10 +57,10 @@ const GroupList = ({ refreshKey = 0 }) => {
 					<button
 						key={g.id}
 						type="button"
-						className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left transition ${
+						className={`w-full flex items-center gap-2 px-2 py-2.5 rounded-xl text-left transition-colors border ${
 							active
-								? 'bg-sky-100 ring-1 ring-primary/30'
-								: 'hover:bg-tertiaryHover'
+								? 'bg-primary/15 border-primary/40 ring-1 ring-primary/30'
+								: 'bg-transparent border-transparent hover:bg-black/5 dark:hover:bg-white/5'
 						}`}
 						onClick={() => {
 							setGroupId(g.id);
@@ -75,11 +75,12 @@ const GroupList = ({ refreshKey = 0 }) => {
 							</div>
 						)}
 						<div className="min-w-0 flex-1">
-							<p className="font-medium text-sm text-black truncate">
+							<p className="font-semibold text-sm text-black truncate">
 								{g.name}
 							</p>
-							<p className="text-xs text-black/50 truncate">
-								{g.lastMessage || 'Group chat'}
+							<p className="text-xs text-black/60 truncate">
+								{previewLastMessage(g.lastMessage, null) ||
+									'Group chat'}
 							</p>
 						</div>
 						<span className="text-[10px] text-black/40 shrink-0">

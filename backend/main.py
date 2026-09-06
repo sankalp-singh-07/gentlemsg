@@ -68,6 +68,10 @@ def _ensure_sqlite_columns(connection) -> None:
                 text("ALTER TABLE chats ADD COLUMN last_read_message_id_user2 VARCHAR")
             )
 
+    call_cols = cols("call_logs")
+    if call_cols and "group_id" not in call_cols:
+        connection.execute(text("ALTER TABLE call_logs ADD COLUMN group_id VARCHAR"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

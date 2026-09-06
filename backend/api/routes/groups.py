@@ -278,3 +278,73 @@ async def typing(
         group_id, {"event": "typing", "userId": current_user["id"]}
     )
     return {"status": "ok"}
+
+
+@router.post("/{group_id}/media")
+@limiter.limit("30/minute")
+async def upload_group_media(
+    request: Request,
+    group_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    result = await gs.upload_media(
+        group_id=group_id,
+        sender_id=current_user["id"],
+        file=file,
+        db=db,
+    )
+    sender = await get_user_by_id(current_user["id"], db)
+    payload = {
+        "event": "new_message",
+        "id": result["message_id"],
+        "groupId": group_id,
+        "senderId": current_user["id"],
+        "senderName": sender.name if sender else "",
+        "senderPhotoURL": sender.photo_url if sender else "",
+        "message": result["url"],
+        "type": result["type"],
+        "sentAt": result.get("sent_at"),
+        "replyToId": result.get("reply_to_id"),
+        "editedAt": None,
+    }
+    await manager.broadcast_to_group(group_id, payload)
+    member_ids = await gs.get_member_user_ids(group_id, db)
+    await manager.broadcast_to_users(
+        member_ids, {"event": "groups_updated", "groupId": group_id}
+    )
+    return result
+
+
+@router.get("/{group_id}/media")
+async def list_group_media(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    await gs.require_member(group_id, current_user["id"], db)
+    return await gs.get_group_media(group_id)
+
+
+@router.get("/{group_id}/files/{filename}")
+async def download_group_file(
+    group_id: str,
+    filename: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    import os
+    from fastapi.responses import FileResponse
+    from core.config import settings
+    from utils import sanitize_filename
+
+    await gs.require_member(group_id, current_user["id"], db)
+    safe_name = sanitize_filename(filename)
+    if safe_name != filename or ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    filepath = os.path.join(settings.UPLOAD_DIR, "groups", group_id, safe_name)
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(filepath)
